@@ -1,0 +1,16 @@
+syntax = "proto3";
+package search;
+
+service Search { rpc SearchWeb(SearchWebRequest) returns (SearchWebResponse); }
+
+message SearchWebRequest {
+    string query = 1; 
+}
+
+message SearchWebResponse {
+    repeated SearchWebResult results = 1;
+}
+
+message SearchWebResult {
+
+}

@@ -6,5 +6,5 @@ members = [
     "million_backend",
     "million_client",
     "million_crawler",
+    "proto",
 ]
-  

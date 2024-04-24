@@ -1,0 +1,10 @@
+syntax = "proto3";
+package admin;
+
+service Admin { rpc AddUrlToQueue(AddUrlToQueueRequest) returns (AddUrlToQueueResponse); }
+
+message AddUrlToQueueRequest {
+    string url = 1;
+}
+
+message AddUrlToQueueResponse {}
