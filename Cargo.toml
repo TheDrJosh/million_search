@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "million_admin_cli",
+    "million_admin_client",
+    "million_backend",
+    "million_client",
+    "million_crawler",
+]
+  
