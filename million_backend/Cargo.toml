@@ -9,3 +9,6 @@ edition = "2021"
 sea-orm = "0.12.15"
 tonic = "0.11.0"
 proto = { path = "../proto" }
+anyhow = { version = "1.0.82", features = ["backtrace"] }
+tokio = { version = "1.37.0", features = ["full"] }
+tokio-stream = { version = "0.1.15", features = ["full"] }

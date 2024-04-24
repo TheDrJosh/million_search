@@ -19,6 +19,11 @@ services:
         shm_size: 128mb
         environment:
             - POSTGRES_PASSWORD=password1234
+    work_queue:
+        image: "rabbitmq:3.13.1"
+        networks:
+            - internal
+        
 networks:
     internal:
   
