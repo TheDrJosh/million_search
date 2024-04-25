@@ -1,4 +1,5 @@
 use admin::AdminServise;
+use amqprs::connection::{Connection, OpenConnectionArguments};
 use crawler::CrawlerServise;
 use search::SearchServise;
 use tonic::transport::Server;
@@ -9,6 +10,19 @@ mod search;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Connect to queue
+
+    let connection = Connection::open(&OpenConnectionArguments::new(
+        "0.0.0.0", 5672, "username", "password",
+    )).await?;
+
+    let channel = connection.open_channel(None).await?;
+
+    let (queue_name, a, b) = channel.queue_declare(args)
+
+    // Connect to database
+
+    // Make grpc endpoint
     let addr = "[::1]:8080".parse()?;
 
     let search_servise = SearchServise::default();
