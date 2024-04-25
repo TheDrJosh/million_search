@@ -1,5 +1,9 @@
 use admin::AdminServise;
-use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::{
+    channel::{BasicPublishArguments, QueueDeclareArguments},
+    connection::{Connection, OpenConnectionArguments},
+    BasicProperties,
+};
 use crawler::CrawlerServise;
 use search::SearchServise;
 use tonic::transport::Server;
@@ -14,11 +18,23 @@ async fn main() -> anyhow::Result<()> {
 
     let connection = Connection::open(&OpenConnectionArguments::new(
         "0.0.0.0", 5672, "username", "password",
-    )).await?;
+    ))
+    .await?;
 
     let channel = connection.open_channel(None).await?;
 
-    let (queue_name, a, b) = channel.queue_declare(args)
+    let (queue_name, _message_count, _consumer_count) = channel
+        .queue_declare(QueueDeclareArguments::default())
+        .await?
+        .unwrap();
+
+    channel.basic_publish(
+        BasicProperties::default(),
+        "Hello World".as_bytes().into_iter().map(|i| *i).collect::<Vec<u8>>(),
+        BasicPublishArguments::default()
+            .routing_key("hello".to_string())
+            .finish(),
+    ).await?;
 
     // Connect to database
 
