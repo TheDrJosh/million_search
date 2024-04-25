@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     let channel = connection.open_channel(None).await?;
 
-    let (queue_name, _message_count, _consumer_count) = channel
+    let (_queue_name, _message_count, _consumer_count) = channel
         .queue_declare(QueueDeclareArguments::default())
         .await?
         .unwrap();
