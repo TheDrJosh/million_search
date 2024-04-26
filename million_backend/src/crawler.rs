@@ -5,7 +5,7 @@ use tokio_stream::Stream;
 use tonic::{Status, Streaming};
 
 #[derive(Debug, Default)]
-pub struct CrawlerServise {}
+pub struct CrawlerServise {} 
 
 #[tonic::async_trait]
 impl proto::crawler::crawler_server::Crawler for CrawlerServise {
@@ -15,6 +15,9 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         &self,
         request: tonic::Request<Streaming<StreamJobsRequest>>,
     ) -> std::result::Result<tonic::Response<Self::StreamJobsStream>, tonic::Status> {
+
+        
+
         todo!()
     }
 }

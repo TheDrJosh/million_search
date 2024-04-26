@@ -3,6 +3,23 @@ package crawler;
 
 service Crawler { rpc StreamJobs(stream StreamJobsRequest) returns (stream StreamJobsResponse); }
 
-message StreamJobsRequest {}
+message StreamJobsRequest {
+    optional JobReturn return = 1;
+}
 
-message StreamJobsResponse {}
+message JobReturn {
+    int64 id = 1;
+
+    optional string title = 2;
+
+    string MIME_type = 3;
+
+    optional string icon_url = 4;
+
+    repeated string linked_urls = 5;
+}
+
+message StreamJobsResponse {
+    int64 id = 1;
+    string url = 2;
+}

@@ -5,8 +5,9 @@ services:
             dockerfile: ./million_backend/Dockerfile
         ports:
             - "8080:8080"
-        networks:
-            - internal
+        links:
+          - "database:database"
+          - "rabbitmq:rabbitmq"
         develop:
           watch:
             - action: rebuild
@@ -14,14 +15,12 @@ services:
 
     database:
         image: "postgres:16.2"
-        networks:
-            - internal
         restart: always
         shm_size: 128mb
         environment:
             - POSTGRES_PASSWORD=password1234
 
-    work_queue:
+    rabbitmq:
         image: "rabbitmq:3.13.1"
         ports:
           - 5672:5672
@@ -29,9 +28,4 @@ services:
         volumes:
         - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
         - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
-        networks:
-            - internal
         
-networks:
-    internal:
-  
