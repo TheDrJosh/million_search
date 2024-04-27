@@ -1,11 +1,14 @@
-use amiquip::{Channel, Connection, Exchange, Publish};
+use amqprs::{
+    channel::{BasicPublishArguments, Channel},
+    BasicProperties,
+};
 use proto::admin::{AddUrlToQueueRequest, AddUrlToQueueResponse};
-use tokio::sync::Mutex;
-use tonic::transport::channel;
+use tonic::Status;
 
-#[derive(Debug)]
-pub struct AdminServise  {
-    pub connection: Mutex<Connection>,
+use crate::{EXCHANGE_NAME, ROUTING_KEY};
+
+pub struct AdminServise {
+    pub channel: Channel,
 }
 
 #[tonic::async_trait]
@@ -14,12 +17,15 @@ impl proto::admin::admin_server::Admin for AdminServise {
         &self,
         request: tonic::Request<AddUrlToQueueRequest>,
     ) -> std::result::Result<tonic::Response<AddUrlToQueueResponse>, tonic::Status> {
+        let inner = request.into_inner();
+        let url = inner.url;
 
-        let channel = self.connection.lock().await.open_channel(None).map_err(|err| tonic::Status::from_error(err.into()))?;
+        let args = BasicPublishArguments::new(EXCHANGE_NAME, ROUTING_KEY);
 
-        let exchange = Exchange::direct(&channel);
-
-        exchange.publish(Publish::new("hello there".as_bytes(), "Crawler Queue")).map_err(|err| tonic::Status::from_error(err.into()))?;
+        self.channel
+            .basic_publish(BasicProperties::default(), url.into_bytes(), args)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
 
         todo!()
     }
