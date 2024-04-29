@@ -7,7 +7,6 @@ services:
             - "8080:8080"
         links:
           - "database:database"
-          - "rabbitmq:rabbitmq"
         develop:
           watch:
             - action: rebuild
@@ -19,13 +18,3 @@ services:
         shm_size: 128mb
         environment:
             - POSTGRES_PASSWORD=password1234
-
-    rabbitmq:
-        image: "rabbitmq:3.13.1"
-        ports:
-          - 5672:5672
-          - 15672:15672
-        volumes:
-        - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
-        - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
-        

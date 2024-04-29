@@ -1,26 +1,35 @@
 syntax = "proto3";
 package crawler;
 
-service Crawler { rpc StreamJobs(stream StreamJobsRequest) returns (stream StreamJobsResponse); }
-
-message StreamJobsRequest {
-    optional JobResult result = 1;
-    bool fetch_new = 2;
+service Crawler { 
+    rpc GetJob(GetJobRequest) returns (GetJobResponse);
+    rpc ReturnJob(ReturnJobRequest) returns (ReturnJobResponse);
+    rpc KeepAliveJob(KeepAliveJobRequest) returns (KeepAliveJobResponse); 
 }
 
-message JobResult {
-    int64 id = 1;
+message GetJobRequest {}
 
-    optional string title = 2;
-
-    string MIME_type = 3;
-
-    optional string icon_url = 4;
-
-    repeated string linked_urls = 5;
-}
-
-message StreamJobsResponse {
+message GetJobResponse {
     int64 id = 1;
     string url = 2;
 }
+
+message ReturnJobRequest {
+    int64 id = 1;
+
+    string MIME_type = 2;
+
+    optional string icon_url = 3;
+
+    repeated string linked_urls = 4;
+
+    // text sections
+}
+
+message ReturnJobResponse {}
+
+message KeepAliveJobRequest {
+    int64 id = 1;
+}
+
+message KeepAliveJobResponse {}
