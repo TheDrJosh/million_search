@@ -7,4 +7,6 @@ members = [
     "million_client",
     "million_crawler",
     "proto",
+    "million_backend/entity",
+    "million_backend/migration",
 ]

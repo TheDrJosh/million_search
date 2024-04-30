@@ -17,4 +17,7 @@ services:
         restart: always
         shm_size: 128mb
         environment:
+            - POSTGRES_USER=million_search
             - POSTGRES_PASSWORD=password1234
+        ports:
+            - "5432:5432"

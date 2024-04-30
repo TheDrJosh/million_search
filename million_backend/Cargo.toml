@@ -12,4 +12,5 @@ proto = { path = "../proto" }
 anyhow = { version = "1.0.82", features = ["backtrace"] }
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = ["full"] }
+dotenvy = "0.15.7"
 

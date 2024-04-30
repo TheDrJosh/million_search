@@ -14,7 +14,7 @@ mod search;
 async fn main() -> anyhow::Result<()> {
     // Connect to database
 
-    let db = Database::connect("postgres://postgres:password1234@database/million_search").await?;
+    let db = Database::connect("postgres://million_search:password1234@database/million_search").await?;
 
     // Make grpc endpoint
 
