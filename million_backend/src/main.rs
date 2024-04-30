@@ -1,5 +1,4 @@
 use admin::AdminServise;
-
 use crawler::CrawlerServise;
 use sea_orm::Database;
 use search::SearchServise;

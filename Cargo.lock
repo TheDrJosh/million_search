@@ -1473,6 +1473,11 @@ dependencies = [
 [[package]]
 name = "million_admin_cli"
 version = "0.1.0"
+dependencies = [
+ "clap",
+ "proto",
+ "tokio",
+]
 
 [[package]]
 name = "million_admin_client"
