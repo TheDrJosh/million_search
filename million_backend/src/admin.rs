@@ -17,7 +17,7 @@ impl proto::admin::admin_server::Admin for AdminServise {
 
         let add_to_queue = crawler_queue::ActiveModel {
             url: ActiveValue::Set(request.url),
-            statis: ActiveValue::Set(String::from("queued")),
+            status: ActiveValue::Set(String::from("queued")),
 
             ..Default::default()
         };

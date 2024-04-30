@@ -21,8 +21,8 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = "0.0.0.0:8080".parse()?;
 
-    let search_servise = SearchServise::default();
-    let crawler_servise = CrawlerServise::default();
+    let search_servise = SearchServise {};
+    let crawler_servise = CrawlerServise { db: db.clone() };
     let admin_servise = AdminServise { db };
 
     Server::builder()
