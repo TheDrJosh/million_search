@@ -1,10 +1,14 @@
-use entity::crawler_queue;
+use chrono::Duration;
+use entity::{crawler_queue, websites};
 use proto::crawler::{
     GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
     ReturnJobResponse,
 };
-use sea_orm::{ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter};
-use tonic::Status;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
+    IntoActiveModel, QueryFilter,
+};
+use tonic::{Response, Status};
 
 #[derive(Debug, Default)]
 pub struct CrawlerServise {
@@ -18,15 +22,6 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         request: tonic::Request<GetJobRequest>,
     ) -> std::result::Result<tonic::Response<GetJobResponse>, tonic::Status> {
         let _request = request.into_inner();
-
-        todo!()
-    }
-
-    async fn return_job(
-        &self,
-        request: tonic::Request<ReturnJobRequest>,
-    ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
-        let request = request.into_inner();
 
         let task = crawler_queue::Entity::find()
             .filter(
@@ -44,9 +39,59 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .ok_or(anyhow::anyhow!("No Jobs in queue"))
             .map_err(|err| Status::from_error(err.into()))?;
 
-        
+        let mut active_task = task.clone().into_active_model();
 
-        todo!()
+        active_task.status = ActiveValue::Set(String::from("executing"));
+        active_task.last_updated = ActiveValue::Set(chrono::Utc::now().naive_utc());
+        active_task.expiry = ActiveValue::Set(Some(
+            (chrono::Utc::now() + Duration::minutes(5)).naive_utc(),
+        ));
+
+        let task = crawler_queue::Entity::update(active_task)
+            .filter(crawler_queue::Column::Id.eq(task.id))
+            .filter(crawler_queue::Column::LastUpdated.eq(task.last_updated))
+            .exec(&self.db)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        Ok(Response::new(GetJobResponse {
+            id: task.id,
+            url: task.url,
+        }))
+    }
+
+    async fn return_job(
+        &self,
+        request: tonic::Request<ReturnJobRequest>,
+    ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
+        let request = request.into_inner();
+
+        let task = crawler_queue::ActiveModel {
+            status: ActiveValue::Set(String::from("complete")),
+            expiry: ActiveValue::Set(None),
+            last_updated: ActiveValue::Set(chrono::Utc::now().naive_utc()),
+            ..Default::default()
+        };
+
+        crawler_queue::Entity::update(task)
+            .filter(crawler_queue::Column::Id.eq(request.id))
+            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .exec(&self.db)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        let website = websites::ActiveModel {
+            url: ActiveValue::Set(request.url),
+            mime_type: ActiveValue::Set(request.mime_type),
+            icon_url: ActiveValue::Set(request.icon_url),
+            ..Default::default()
+        };
+        website
+            .insert(&self.db)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        Ok(Response::new(ReturnJobResponse {}))
     }
 
     async fn keep_alive_job(
@@ -55,6 +100,21 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
     ) -> std::result::Result<tonic::Response<KeepAliveJobResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        todo!()
+        let task = crawler_queue::ActiveModel {
+            expiry: ActiveValue::Set(Some(
+                (chrono::Utc::now() + Duration::minutes(5)).naive_utc(),
+            )),
+            last_updated: ActiveValue::Set(chrono::Utc::now().naive_utc()),
+            ..Default::default()
+        };
+
+        crawler_queue::Entity::update(task)
+            .filter(crawler_queue::Column::Id.eq(request.id))
+            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .exec(&self.db)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        Ok(Response::new(KeepAliveJobResponse {}))
     }
 }

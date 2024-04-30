@@ -10,18 +10,20 @@ service Crawler {
 message GetJobRequest {}
 
 message GetJobResponse {
-    int64 id = 1;
+    int32 id = 1;
     string url = 2;
 }
 
 message ReturnJobRequest {
-    int64 id = 1;
+    int32 id = 1;
 
-    string MIME_type = 2;
+    string url = 2;
 
-    optional string icon_url = 3;
+    string MIME_type = 3;
 
-    repeated string linked_urls = 4;
+    optional string icon_url = 4;
+ 
+    repeated string linked_urls = 5;
 
     // text sections
 }
@@ -29,7 +31,8 @@ message ReturnJobRequest {
 message ReturnJobResponse {}
 
 message KeepAliveJobRequest {
-    int64 id = 1;
+    int32 id = 1;
+    string url = 2;
 }
 
 message KeepAliveJobResponse {}
