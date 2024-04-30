@@ -1,14 +1,16 @@
 use chrono::Duration;
 use entity::{crawler_queue, websites};
-use proto::crawler::{
-    GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
-    ReturnJobResponse,
+use proto::{
+    crawler::{
+        GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
+        ReturnJobResponse,
+    },
+    tonic::{self, Response, Status},
 };
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     IntoActiveModel, QueryFilter,
 };
-use tonic::{Response, Status};
 
 #[derive(Debug, Default)]
 pub struct CrawlerServise {
@@ -36,8 +38,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .one(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?
-            .ok_or(anyhow::anyhow!("No Jobs in queue"))
-            .map_err(|err| Status::from_error(err.into()))?;
+            .ok_or(Status::resource_exhausted("No more Jobs in queue"))?;
 
         let mut active_task = task.clone().into_active_model();
 
@@ -66,6 +67,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
     ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
         let request = request.into_inner();
 
+        // TODO: Check expire to accept input
+
         let task = crawler_queue::ActiveModel {
             status: ActiveValue::Set(String::from("complete")),
             expiry: ActiveValue::Set(None),
@@ -78,6 +81,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .filter(crawler_queue::Column::Url.eq(request.url.clone()))
             .exec(&self.db)
             .await
+            // .unwrap();
             .map_err(|err| Status::from_error(err.into()))?;
 
         let website = websites::ActiveModel {
@@ -89,6 +93,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         website
             .insert(&self.db)
             .await
+            // .unwrap();
             .map_err(|err| Status::from_error(err.into()))?;
 
         Ok(Response::new(ReturnJobResponse {}))

@@ -1,9 +1,9 @@
 use admin::AdminServise;
 use crawler::CrawlerServise;
+use migration::{Migrator, MigratorTrait};
+use proto::tonic::transport::Server;
 use sea_orm::Database;
 use search::SearchServise;
-
-use tonic::transport::Server;
 
 mod admin;
 mod crawler;
@@ -15,6 +15,8 @@ async fn main() -> anyhow::Result<()> {
 
     let db =
         Database::connect("postgres://million_search:password1234@database/million_search").await?;
+
+    Migrator::up(&db, None).await?;
 
     // Make grpc endpoint
 

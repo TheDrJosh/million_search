@@ -10,12 +10,11 @@ sea-orm = { version = "0.12.15", features = [
     "sqlx-postgres",
     "runtime-tokio-native-tls",
 ] }
-tonic = "0.11.0"
 proto = { path = "../proto" }
 anyhow = { version = "1.0.82", features = ["backtrace"] }
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = ["full"] }
 dotenvy = "0.15.7"
-
 entity = { path = "entity" }
+migration = { path = "migration" }
 chrono = "0.4.38"

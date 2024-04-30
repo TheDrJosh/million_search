@@ -10,3 +10,7 @@ reqwest = "0.12.4"
 scraper = "0.19.0"
 tokio = { version = "1.37.0", features = ["full"] }
 proto = { path = "../proto" }
+anyhow = { version = "1.0.82", features = ["backtrace"] }
+url = "2.5.0"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

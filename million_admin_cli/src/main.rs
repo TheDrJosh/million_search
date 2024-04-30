@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use proto::admin::AddUrlToQueueRequest;
+use proto::admin::{AddUrlToQueueRequest, GetAllUrlsInQueueRequest};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -14,6 +14,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     AddUrl { url: String },
+    GetAllUrl,
 }
 
 #[tokio::main]
@@ -35,6 +36,15 @@ async fn main() {
                 .add_url_to_queue(AddUrlToQueueRequest { url })
                 .await
                 .unwrap();
+        }
+        Commands::GetAllUrl => {
+            let res = backend
+                .get_all_urls_in_queue(GetAllUrlsInQueueRequest {})
+                .await
+                .unwrap()
+                .into_inner()
+                .urls;
+            println!("{:#?}", res);
         }
     }
 }

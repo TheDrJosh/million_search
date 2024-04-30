@@ -9,3 +9,6 @@ pub mod admin {
 pub mod crawler {
     tonic::include_proto!("crawler");
 }
+
+pub use prost;
+pub use tonic;

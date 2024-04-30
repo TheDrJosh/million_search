@@ -1,10 +1,15 @@
 syntax = "proto3";
 package admin;
 
-service Admin { rpc AddUrlToQueue(AddUrlToQueueRequest) returns (AddUrlToQueueResponse); }
-
-message AddUrlToQueueRequest {
-    string url = 1;
+service Admin {
+  rpc AddUrlToQueue(AddUrlToQueueRequest) returns (AddUrlToQueueResponse);
+  rpc GetAllUrlsInQueue(GetAllUrlsInQueueRequest) returns (GetAllUrlsInQueueResponse);
 }
 
+message AddUrlToQueueRequest { string url = 1; }
+
 message AddUrlToQueueResponse {}
+
+message GetAllUrlsInQueueRequest {}
+
+message GetAllUrlsInQueueResponse { repeated string urls = 1; }

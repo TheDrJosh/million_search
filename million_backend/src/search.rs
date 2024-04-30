@@ -1,4 +1,7 @@
-use proto::search::{SearchWebRequest, SearchWebResponse};
+use proto::{
+    search::{SearchWebRequest, SearchWebResponse},
+    tonic,
+};
 
 #[derive(Debug, Default)]
 pub struct SearchServise {}
