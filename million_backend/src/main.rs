@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     let search_servise = SearchServise::default();
     let crawler_servise = CrawlerServise::default();
-    let admin_servise = AdminServise {};
+    let admin_servise = AdminServise { db };
 
     Server::builder()
         .add_service(proto::search::search_server::SearchServer::new(

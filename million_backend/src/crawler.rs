@@ -1,7 +1,9 @@
+use entity::crawler_queue;
 use proto::crawler::{
     GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
     ReturnJobResponse,
 };
+use sea_orm::{sea_query::Expr, ColumnTrait, Condition, EntityTrait, QueryFilter, Value};
 
 #[derive(Debug, Default)]
 pub struct CrawlerServise {}
@@ -12,6 +14,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         &self,
         request: tonic::Request<GetJobRequest>,
     ) -> std::result::Result<tonic::Response<GetJobResponse>, tonic::Status> {
+        let _request = request.into_inner();
+
         todo!()
     }
 
@@ -19,6 +23,18 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         &self,
         request: tonic::Request<ReturnJobRequest>,
     ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
+        let request = request.into_inner();
+
+        crawler_queue::Entity::find().filter(
+            Condition::any()
+                .add(crawler_queue::Column::Status.eq("queued"))
+                .add(
+                    Condition::all()
+                        .add(crawler_queue::Column::Status.eq("executing"))
+                        .add(crawler_queue::Column::Expiry.lte() ),
+                ),
+        );
+
         todo!()
     }
 
@@ -26,6 +42,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         &self,
         request: tonic::Request<KeepAliveJobRequest>,
     ) -> std::result::Result<tonic::Response<KeepAliveJobResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
 }

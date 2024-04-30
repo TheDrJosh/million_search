@@ -20,9 +20,10 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
+                    .col(ColumnDef::new(Websites::Url).string().not_null())
                     .col(ColumnDef::new(Websites::MimeType).string().not_null())
                     .col(ColumnDef::new(Websites::IconUrl).string())
-                    .col(ColumnDef::new(Websites::CreatedAt).timestamp().default(Expr::current_timestamp()))
+                    .col(ColumnDef::new(Websites::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
                     .to_owned(),
             )
             .await?;
@@ -40,10 +41,10 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(CrawlerQueue::Url).string().not_null())
-                    .col(ColumnDef::new(CrawlerQueue::Statis).string().not_null())
-                    .col(ColumnDef::new(CrawlerQueue::LastKeepAlive).timestamp().default(Expr::current_timestamp()))
-                    .col(ColumnDef::new(CrawlerQueue::LastUpdated).timestamp().default(Expr::current_timestamp()))
-                    .col(ColumnDef::new(CrawlerQueue::CreatedAt).timestamp().default(Expr::current_timestamp()))
+                    .col(ColumnDef::new(CrawlerQueue::Status).string().not_null())
+                    .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp().default(Expr::current_timestamp()))
+                    .col(ColumnDef::new(CrawlerQueue::LastUpdated).timestamp().default(Expr::current_timestamp()).not_null())
+                    .col(ColumnDef::new(CrawlerQueue::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
                     .to_owned(),
             )
             .await?;
@@ -69,6 +70,7 @@ impl MigrationTrait for Migration {
 enum Websites {
     Table,
     Id,
+    Url,
     MimeType,
     IconUrl,
     CreatedAt,
@@ -79,8 +81,8 @@ enum CrawlerQueue {
     Table,
     Id,
     Url,
-    Statis,
-    LastKeepAlive,
+    Status,
+    Expiry,
     LastUpdated,
     CreatedAt,
 }

@@ -8,10 +8,10 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub url: String,
-    pub statis: String,
-    pub last_keep_alive: Option<DateTime>,
-    pub last_updated: Option<DateTime>,
-    pub created_at: Option<DateTime>,
+    pub status: String,
+    pub expiry: Option<DateTime>,
+    pub last_updated: DateTime,
+    pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
