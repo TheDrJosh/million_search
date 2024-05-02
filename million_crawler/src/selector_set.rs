@@ -59,7 +59,7 @@ impl SelectorSet {
             .map(|elem| elem.attr("codebase").unwrap());
         let cite_tags = doc
             .select(&self.cite_selector)
-            .map(|elem| elem.attr("href").unwrap());
+            .map(|elem| elem.attr("cite").unwrap());
         let background_tags = doc
             .select(&self.background_selector)
             .map(|elem| elem.attr("background").unwrap());

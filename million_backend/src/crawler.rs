@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{crawler_queue, websites};
 use proto::{
     crawler::{
+        return_job_request::{self, return_job_request_ok::Body},
         GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
         ReturnJobResponse,
     },
@@ -69,15 +72,29 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
     ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
         let request = request.into_inner();
 
+        let result = if let Some(result) = request.result {
+            if let return_job_request::Result::Ok(result) = result {
+                result
+            } else {
+                // increment attemps
+                return Ok(Response::new(ReturnJobResponse {}));
+            }
+        } else {
+            // increment attemps
+            return Ok(Response::new(ReturnJobResponse {}));
+        };
+
+        let _url = Url::from_str(&request.url).map_err(|err| Status::from_error(err.into()))?;
+
         let task = crawler_queue::Entity::find_by_id(request.id)
             .filter(crawler_queue::Column::Url.eq(request.url.clone()))
             .one(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?
-            .ok_or(Status::invalid_argument("invalid task"))?;
+            .ok_or(Status::invalid_argument("task not found"))?;
 
         if task.status != "executing" {
-            return Err(Status::invalid_argument("invalid task"));
+            return Err(Status::invalid_argument("not an active task"));
         }
 
         if task.expiry.unwrap() < Utc::now().naive_utc() {
@@ -100,18 +117,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .await
             .map_err(|err| Status::from_error(err.into()))?;
 
-        let website = websites::ActiveModel {
-            url: ActiveValue::Set(request.url),
-            mime_type: ActiveValue::Set(request.mime_type),
-            icon_url: ActiveValue::Set(request.icon_url),
-            ..Default::default()
-        };
-        website
-            .insert(&self.db)
-            .await
-            .map_err(|err| Status::from_error(err.into()))?;
-
-        for url in request.linked_urls {
+        for url in result.linked_urls {
             let mut url = url
                 .parse::<Url>()
                 .map_err(|err| Status::from_error(err.into()))?;
@@ -138,6 +144,25 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                 .insert(&self.db)
                 .await
                 .map_err(|err| Status::from_error(err.into()))?;
+        }
+
+        match result.body {
+            Some(Body::Html(html_body)) => {
+                let website = websites::ActiveModel {
+                    url: ActiveValue::Set(request.url),
+                    mime_type: ActiveValue::Set(result.mime_type),
+                    icon_url: ActiveValue::Set(html_body.icon_url),
+                    ..Default::default()
+                };
+                website 
+                    .insert(&self.db)
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
+            }
+            Some(Body::Img(img_body)) => {
+                
+            }
+            None => {}
         }
 
         Ok(Response::new(ReturnJobResponse {}))

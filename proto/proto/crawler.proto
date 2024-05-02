@@ -14,20 +14,36 @@ message GetJobResponse {
   string url = 2;
 }
 
-
-//TODO - Need to be able to set back could not complete
 message ReturnJobRequest {
   int32 id = 1;
 
   string url = 2;
 
-  string MIME_type = 3;
+  oneof result {
+    ReturnJobRequestOk ok = 3;
+    ReturnJobRequestErr err = 4;
+  }
 
-  repeated string linked_urls = 4;
+  message ReturnJobRequestOk {
+    int32 status = 3;
 
-  // text sections
+    string MIME_type = 4;
 
-  optional string icon_url = 5;
+    repeated string linked_urls = 5;
+
+    oneof body {
+      ReturnJobRequestHtml html = 7;
+      ReturnJobRequestImg img = 8;
+    }
+
+    message ReturnJobRequestHtml {
+      optional string icon_url = 1;
+      optional string title = 2;
+    }
+    message ReturnJobRequestImg { bytes data = 1; }
+  }
+
+  message ReturnJobRequestErr {}
 }
 
 message ReturnJobResponse {}

@@ -2,7 +2,11 @@ use std::time::Duration;
 
 use exponential_backoff::Backoff;
 use proto::{
-    crawler::{crawler_client::CrawlerClient, GetJobRequest, GetJobResponse, ReturnJobRequest},
+    crawler::{
+        crawler_client::CrawlerClient,
+        return_job_request::{self, ReturnJobRequestOk},
+        GetJobRequest, GetJobResponse, ReturnJobRequest,
+    },
     tonic::{transport::Channel, Code, Status},
 };
 use tracing::info;
@@ -29,7 +33,8 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
 
     info!("Crawling {}", job.url);
 
-    let res = reqwest::get(job.url.clone()).await?.error_for_status()?;
+    let res = reqwest::get(job.url.clone()).await?;
+    let status = res.status();
 
     let headers = res.headers();
 
@@ -43,9 +48,12 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
         let ret = ReturnJobRequest {
             id: job.id,
             url: job.url,
-            mime_type,
-            icon_url: None,
-            linked_urls: vec![],
+            result: Some(return_job_request::Result::Ok(ReturnJobRequestOk {
+                status: status.as_u16() as i32,
+                mime_type,
+                linked_urls: vec![],
+                body: None,
+            })),
         };
 
         client.return_job(ret).await?.into_inner();
@@ -64,9 +72,12 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
     let ret = ReturnJobRequest {
         id: job.id,
         url: job.url,
-        mime_type,
-        icon_url: None,
-        linked_urls: tags.into_iter().map(|url| url.to_string()).collect(),
+        result: Some(return_job_request::Result::Ok(ReturnJobRequestOk {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: tags.into_iter().map(|url| url.to_string()).collect(),
+            body: None,
+        })),
     };
 
     client.return_job(ret).await?.into_inner();
