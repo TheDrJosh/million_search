@@ -1,4 +1,4 @@
-use chrono::Duration;
+use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{crawler_queue, websites};
 use proto::{
     crawler::{
@@ -9,8 +9,9 @@ use proto::{
 };
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
-    IntoActiveModel, QueryFilter,
+    QueryFilter,
 };
+use url::Url;
 
 #[derive(Debug, Default)]
 pub struct CrawlerServise {
@@ -40,15 +41,16 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .map_err(|err| Status::from_error(err.into()))?
             .ok_or(Status::resource_exhausted("No more Jobs in queue"))?;
 
-        let mut active_task = task.clone().into_active_model();
-
-        active_task.status = ActiveValue::Set(String::from("executing"));
-        active_task.last_updated = ActiveValue::Set(chrono::Utc::now().naive_utc());
-        active_task.expiry = ActiveValue::Set(Some(
-            (chrono::Utc::now() + Duration::minutes(5)).naive_utc(),
-        ));
-
-        let task = crawler_queue::Entity::update(active_task)
+        crawler_queue::Entity::update_many()
+            .col_expr(crawler_queue::Column::Status, "executing".into())
+            .col_expr(
+                crawler_queue::Column::LastUpdated,
+                chrono::Utc::now().naive_utc().into(),
+            )
+            .col_expr(
+                crawler_queue::Column::Expiry,
+                Some((chrono::Utc::now() + Duration::minutes(5)).naive_utc()).into(),
+            )
             .filter(crawler_queue::Column::Id.eq(task.id))
             .filter(crawler_queue::Column::LastUpdated.eq(task.last_updated))
             .exec(&self.db)
@@ -67,21 +69,35 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
     ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        // TODO: Check expire to accept input
+        let task = crawler_queue::Entity::find_by_id(request.id)
+            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .one(&self.db)
+            .await
+            .map_err(|err| Status::from_error(err.into()))?
+            .ok_or(Status::invalid_argument("invalid task"))?;
 
-        let task = crawler_queue::ActiveModel {
-            status: ActiveValue::Set(String::from("complete")),
-            expiry: ActiveValue::Set(None),
-            last_updated: ActiveValue::Set(chrono::Utc::now().naive_utc()),
-            ..Default::default()
-        };
+        if task.status != "executing" {
+            return Err(Status::invalid_argument("invalid task"));
+        }
 
-        crawler_queue::Entity::update(task)
+        if task.expiry.unwrap() < Utc::now().naive_utc() {
+            return Err(Status::invalid_argument("task expired"));
+        }
+
+        crawler_queue::Entity::update_many()
+            .col_expr(crawler_queue::Column::Status, "complete".into())
+            .col_expr(
+                crawler_queue::Column::Expiry,
+                Option::<NaiveDateTime>::None.into(),
+            )
+            .col_expr(
+                crawler_queue::Column::LastUpdated,
+                chrono::Utc::now().naive_utc().into(),
+            )
             .filter(crawler_queue::Column::Id.eq(request.id))
             .filter(crawler_queue::Column::Url.eq(request.url.clone()))
             .exec(&self.db)
             .await
-            // .unwrap();
             .map_err(|err| Status::from_error(err.into()))?;
 
         let website = websites::ActiveModel {
@@ -93,8 +109,33 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         website
             .insert(&self.db)
             .await
-            // .unwrap();
             .map_err(|err| Status::from_error(err.into()))?;
+
+        for site in request.linked_urls {
+            if crawler_queue::Entity::find()
+                .filter(crawler_queue::Column::Url.eq(site.clone()))
+                .all(&self.db)
+                .await
+                .map_err(|err| Status::from_error(err.into()))?
+                .len()
+                != 0
+            {
+                continue;
+            }
+
+            site.parse::<Url>()
+                .map_err(|err| Status::from_error(err.into()))?;
+
+            let website = crawler_queue::ActiveModel {
+                url: ActiveValue::Set(site),
+                status: ActiveValue::Set(String::from("queued")),
+                ..Default::default()
+            };
+            website
+                .insert(&self.db)
+                .await
+                .map_err(|err| Status::from_error(err.into()))?;
+        }
 
         Ok(Response::new(ReturnJobResponse {}))
     }

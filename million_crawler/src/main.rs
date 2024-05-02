@@ -18,22 +18,17 @@ async fn main() -> anyhow::Result<()> {
 
     let mut client = CrawlerClient::connect("http://localhost:8080").await?;
 
-    info!("Getting Job");
+    loop {
+        do_job(&mut client).await?;
+    }
+}
 
-    let job = get_job(&mut client).await?;
+async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
+    let job = get_job(client).await?;
 
-    info!("Got Job");
-
-    // let job = GetJobResponse {
-    //     id: 0,
-    //     url: "https://ziglang.org/".to_owned(),
-    // };
-
-    info!("Getting Webpage");
+    info!("Crawling {}", job.url);
 
     let res = reqwest::get(job.url.clone()).await?.error_for_status()?;
-
-    info!("Got Webpage");
 
     let headers = res.headers();
 
@@ -41,37 +36,21 @@ async fn main() -> anyhow::Result<()> {
 
     let text = res.text().await?;
 
-    info!("Starting Parse");
-
     let html = scraper::Html::parse_document(&text);
-
-    info!("Parsed Finished");
 
     let selector = SelectorSet::new();
 
-    info!("Starting Sellect");
-
     let tags = selector.select(&html, &job.url.parse()?);
-
-    info!("Sellect Finished");
 
     let ret = ReturnJobRequest {
         id: job.id,
         url: job.url,
-        mime_type: mime_type,
+        mime_type,
         icon_url: None,
         linked_urls: tags.into_iter().map(|url| url.to_string()).collect(),
     };
 
-    // println!("{:#?}", ret);
-
-    let mut client = CrawlerClient::connect("http://localhost:8080").await?;
-
-    info!("Starting Job Return");
-
     client.return_job(ret).await?.into_inner();
-
-    info!("Job Return Finished");
 
     Ok(())
 }

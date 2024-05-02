@@ -18,3 +18,4 @@ dotenvy = "0.15.7"
 entity = { path = "entity" }
 migration = { path = "migration" }
 chrono = "0.4.38"
+url = "2.5.0"
