@@ -14,6 +14,8 @@ message GetJobResponse {
   string url = 2;
 }
 
+
+//TODO - Need to be able to set back could not complete
 message ReturnJobRequest {
   int32 id = 1;
 

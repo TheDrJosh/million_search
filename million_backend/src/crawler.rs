@@ -111,9 +111,15 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .await
             .map_err(|err| Status::from_error(err.into()))?;
 
-        for site in request.linked_urls {
+        for url in request.linked_urls {
+            let mut url = url
+                .parse::<Url>()
+                .map_err(|err| Status::from_error(err.into()))?;
+
+            url.set_fragment(None);
+
             if crawler_queue::Entity::find()
-                .filter(crawler_queue::Column::Url.eq(site.clone()))
+                .filter(crawler_queue::Column::Url.eq(url.to_string()))
                 .all(&self.db)
                 .await
                 .map_err(|err| Status::from_error(err.into()))?
@@ -123,11 +129,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                 continue;
             }
 
-            site.parse::<Url>()
-                .map_err(|err| Status::from_error(err.into()))?;
-
             let website = crawler_queue::ActiveModel {
-                url: ActiveValue::Set(site),
+                url: ActiveValue::Set(url.to_string()),
                 status: ActiveValue::Set(String::from("queued")),
                 ..Default::default()
             };

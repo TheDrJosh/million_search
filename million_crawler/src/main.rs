@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use backoff::exponential::ExponentialBackoff;
+use exponential_backoff::Backoff;
 use proto::{
     crawler::{crawler_client::CrawlerClient, GetJobRequest, GetJobResponse, ReturnJobRequest},
     tonic::{transport::Channel, Code, Status},
@@ -33,7 +33,25 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
 
     let headers = res.headers();
 
-    let mime_type = headers.get("Content-Type").unwrap().to_str()?.to_owned();
+    let mime_type = headers
+        .get("Content-Type")
+        .map(|mt| mt.to_str().ok().map(|mt| mt.to_owned()))
+        .flatten()
+        .unwrap_or_default();
+
+    if !(mime_type.is_empty() || mime_type.contains("html")) {
+        let ret = ReturnJobRequest {
+            id: job.id,
+            url: job.url,
+            mime_type,
+            icon_url: None,
+            linked_urls: vec![],
+        };
+
+        client.return_job(ret).await?.into_inner();
+
+        return Ok(());
+    }
 
     let text = res.text().await?;
 
@@ -56,25 +74,27 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn fetch_job(
-    client: &mut CrawlerClient<Channel>,
-) -> Result<GetJobResponse, backoff::Error<Status>> {
-    match client.get_job(GetJobRequest {}).await {
-        Ok(res) => {
-            let res = res.into_inner();
+async fn get_job(client: &mut CrawlerClient<Channel>) -> Result<GetJobResponse, Status> {
+    let backoff = Backoff::new(
+        128,
+        Duration::from_millis(100),
+        Some(Duration::from_secs(10 * 60)),
+    );
 
-            Ok(res)
+    for duration in &backoff {
+        match client.get_job(GetJobRequest {}).await {
+            Ok(res) => {
+                let res = res.into_inner();
+
+                return Ok(res);
+            }
+            Err(err) if err.code() == Code::ResourceExhausted => {
+                info!("Waiting for {} seconds", duration.as_secs_f32());
+                tokio::time::sleep(duration).await;
+            }
+            Err(err) => return Err(err),
         }
-        Err(err) if err.code() == Code::ResourceExhausted => Err(backoff::Error::transient(err)),
-        Err(err) => Err(backoff::Error::permanent(err)),
     }
-}
 
-async fn get_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<GetJobResponse> {
-    let job = backoff::future::retry(ExponentialBackoff::default(), || async {
-        fetch_job(client).await
-    })
-    .await;
-
-    Ok(job.unwrap())
+    return Err(Status::unavailable("cant get job from server"));
 }

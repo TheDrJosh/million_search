@@ -42,7 +42,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(CrawlerQueue::Url).string().not_null())
                     .col(ColumnDef::new(CrawlerQueue::Status).string().not_null())
-                    .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp().default(Expr::current_timestamp()))
+                    .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp())
                     .col(ColumnDef::new(CrawlerQueue::LastUpdated).timestamp().default(Expr::current_timestamp()).not_null())
                     .col(ColumnDef::new(CrawlerQueue::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
                     .to_owned(),
