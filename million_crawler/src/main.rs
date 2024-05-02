@@ -1,8 +1,9 @@
 use std::time::Duration;
 
+use backoff::exponential::ExponentialBackoff;
 use proto::{
     crawler::{crawler_client::CrawlerClient, GetJobRequest, GetJobResponse, ReturnJobRequest},
-    tonic::{transport::Channel, Code},
+    tonic::{transport::Channel, Code, Status},
 };
 use tracing::info;
 
@@ -55,24 +56,25 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn get_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<GetJobResponse> {
-    let mut job = None;
+async fn fetch_job(
+    client: &mut CrawlerClient<Channel>,
+) -> Result<GetJobResponse, backoff::Error<Status>> {
+    match client.get_job(GetJobRequest {}).await {
+        Ok(res) => {
+            let res = res.into_inner();
 
-    while job.is_none() {
-        match client.get_job(GetJobRequest {}).await {
-            Ok(res) => {
-                let res = res.into_inner();
-
-                job = Some(res);
-            }
-            Err(err) if err.code() == Code::ResourceExhausted => {
-                tokio::time::sleep(Duration::from_secs(10)).await;
-            }
-            Err(err) => {
-                Err(err)?;
-            }
+            Ok(res)
         }
+        Err(err) if err.code() == Code::ResourceExhausted => Err(backoff::Error::transient(err)),
+        Err(err) => Err(backoff::Error::permanent(err)),
     }
+}
+
+async fn get_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<GetJobResponse> {
+    let job = backoff::future::retry(ExponentialBackoff::default(), || async {
+        fetch_job(client).await
+    })
+    .await;
 
     Ok(job.unwrap())
 }
