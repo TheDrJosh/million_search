@@ -4,7 +4,11 @@ use exponential_backoff::Backoff;
 use proto::{
     crawler::{
         crawler_client::CrawlerClient,
-        return_job_request::{self, ReturnJobRequestOk},
+        return_job_request::{
+            self,
+            return_job_request_ok::{Body, Html},
+            ReturnJobRequestOk,
+        },
         GetJobRequest, GetJobResponse, ReturnJobRequest,
     },
     tonic::{transport::Channel, Code, Status},
@@ -65,9 +69,12 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
 
     let html = scraper::Html::parse_document(&text);
 
+    //TODO: Make Global
     let selector = SelectorSet::new();
 
-    let tags = selector.select(&html, &job.url.parse()?);
+    let job_url = job.url.parse()?;
+
+    let urls = selector.select_urls(&html, &job_url);
 
     let ret = ReturnJobRequest {
         id: job.id,
@@ -75,8 +82,16 @@ async fn do_job(client: &mut CrawlerClient<Channel>) -> anyhow::Result<()> {
         result: Some(return_job_request::Result::Ok(ReturnJobRequestOk {
             status: status.as_u16() as i32,
             mime_type,
-            linked_urls: tags.into_iter().map(|url| url.to_string()).collect(),
-            body: None,
+            linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
+            body: Some(Body::Html(Html {
+                title: selector.select_title(&html),
+                description: selector.select_description(&html),
+                icon_url: selector
+                    .select_icon_url(&html, &job_url)
+                    .map(|url| url.to_string()),
+                text_fields: selector.select_text_fields(&html),
+                sections: selector.select_sections(&html),
+            })),
         })),
     };
 

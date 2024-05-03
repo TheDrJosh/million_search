@@ -1,24 +1,29 @@
-use std::str::FromStr;
+use std::{io::Cursor, str::FromStr};
 
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{crawler_queue, websites};
 use proto::{
     crawler::{
-        return_job_request::{self, return_job_request_ok::Body},
+        return_job_request::{
+            self,
+            return_job_request_ok::{image::Data, Body},
+        },
         GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
         ReturnJobResponse,
     },
     tonic::{self, Response, Status},
 };
+use s3::Bucket;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     QueryFilter,
 };
 use url::Url;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CrawlerServise {
     pub db: DatabaseConnection,
+    pub bucket: Bucket,
 }
 
 #[tonic::async_trait]
@@ -76,11 +81,11 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             if let return_job_request::Result::Ok(result) = result {
                 result
             } else {
-                // increment attemps
+                //TODO: increment attemps
                 return Ok(Response::new(ReturnJobResponse {}));
             }
         } else {
-            // increment attemps
+            //TODO: increment attemps
             return Ok(Response::new(ReturnJobResponse {}));
         };
 
@@ -154,13 +159,46 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     icon_url: ActiveValue::Set(html_body.icon_url),
                     ..Default::default()
                 };
-                website 
+                website
                     .insert(&self.db)
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
             }
-            Some(Body::Img(img_body)) => {
-                
+            Some(Body::Image(image_body)) => match image_body.data {
+                Some(Data::Bitmap(bitmap)) => {
+                    let img = image::io::Reader::new(Cursor::new(bitmap.data))
+                        .with_guessed_format()
+                        .map_err(|err| Status::from_error(err.into()))?
+                        .decode()
+                        .map_err(|err| Status::from_error(err.into()))?;
+
+                    let img = if img.width() > 256 || img.height() > 256 {
+                        img.resize(256, 256, image::imageops::FilterType::Gaussian)
+                    } else {
+                        img
+                    };
+
+                    let mut img_av1 = Vec::new();
+
+                    img.write_to(&mut Cursor::new(&mut img_av1), image::ImageFormat::Avif)
+                        .map_err(|err| Status::from_error(err.into()))?;
+
+                    self.bucket
+                        .put_object(request.url, &img_av1)
+                        .await
+                        .map_err(|err| Status::from_error(err.into()))?;
+                }
+
+                Some(Data::Vector(vector)) => {
+                    todo!()
+                }
+                None => {}
+            },
+            Some(Body::Video(_video_body)) => {
+                todo!()
+            }
+            Some(Body::Audio(_audio_body)) => {
+                todo!()
             }
             None => {}
         }

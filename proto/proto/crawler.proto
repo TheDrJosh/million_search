@@ -32,15 +32,31 @@ message ReturnJobRequest {
     repeated string linked_urls = 5;
 
     oneof body {
-      ReturnJobRequestHtml html = 7;
-      ReturnJobRequestImg img = 8;
+      Html html = 7;
+      Image image = 8;
+      Video video = 9;
+      Audio audio = 10;
     }
 
-    message ReturnJobRequestHtml {
-      optional string icon_url = 1;
-      optional string title = 2;
+    message Html {
+      optional string title = 1;
+      optional string description = 2;
+      optional string icon_url = 3;
+
+      repeated string text_fields = 4;
+      repeated string sections = 5;
     }
-    message ReturnJobRequestImg { bytes data = 1; }
+    message Image {
+      oneof data {
+        BitmapImage bitmap = 1;
+        VectorImage vector = 2;
+      }
+
+      message BitmapImage { bytes data = 1; }
+      message VectorImage { string svg = 1; }
+    }
+    message Video { bytes data = 1; }
+    message Audio { bytes data = 1; }
   }
 
   message ReturnJobRequestErr {}

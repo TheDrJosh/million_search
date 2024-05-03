@@ -3,7 +3,7 @@ use proto::{
     tonic,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SearchServise {}
 
 #[tonic::async_trait]

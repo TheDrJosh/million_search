@@ -21,6 +21,13 @@ pub struct SelectorSet {
     srcset_selector: Selector,
     archive_selector: Selector,
     meta_http_equiv_refresh_content_selector: Selector,
+
+    title_selector: Selector,
+    description_selector: Selector,
+    icon_link_selector: Selector,
+
+    text_fields_selector: Selector,
+    sections_selector: Selector,
 }
 
 impl SelectorSet {
@@ -41,16 +48,64 @@ impl SelectorSet {
             icon_selector: Selector::parse("[icon]").unwrap(),
             manifest_selector: Selector::parse("[manifest]").unwrap(),
             poster_selector: Selector::parse("[poster]").unwrap(),
+
             srcset_selector: Selector::parse("[srcset]").unwrap(),
             archive_selector: Selector::parse("[archive]").unwrap(),
             meta_http_equiv_refresh_content_selector: Selector::parse(
                 "meta[http-equiv=\"refresh\"][content]",
             )
             .unwrap(),
+
+            title_selector: Selector::parse("title").unwrap(),
+            description_selector: Selector::parse("meta[name=\"description\"][content]").unwrap(),
+            icon_link_selector: Selector::parse("link[rel=\"icon\"][href]").unwrap(),
+
+            text_fields_selector: Selector::parse("p").unwrap(),
+            sections_selector: Selector::parse("h1, h2, h3, h4, h5, h6").unwrap(),
         }
     }
 
-    pub fn select(&self, doc: &Html, page_url: &Url) -> Vec<Url> {
+    pub fn select_title(&self, doc: &Html) -> Option<String> {
+        doc.select(&self.title_selector)
+            .next()
+            .map(|title| title.text().map(|text| text.to_string()).collect())
+    }
+
+    pub fn select_description(&self, doc: &Html) -> Option<String> {
+        doc.select(&self.description_selector)
+            .next()
+            .map(|description| description.attr("content"))
+            .flatten()
+            .map(|description| description.to_owned())
+    }
+
+    pub fn select_icon_url(&self, doc: &Html, page_url: &Url) -> Option<Url> {
+        doc.select(&self.icon_link_selector)
+            .next()
+            .map(|icon_url| icon_url.attr("href"))
+            .flatten()
+            .map(|icon_url| Self::normalize_url(icon_url, page_url).ok())
+            .flatten()
+    }
+
+    pub fn select_text_fields(&self, doc: &Html) -> Vec<String> {
+        doc.select(&self.text_fields_selector)
+            .map(|text| text.text().map(|text| text.to_owned()).collect())
+            .collect()
+    }
+
+    pub fn select_sections(&self, doc: &Html) -> Vec<String> {
+        doc.select(&self.sections_selector)
+            .map(|sections| {
+                sections
+                    .text()
+                    .map(|sections| sections.to_owned())
+                    .collect()
+            })
+            .collect()
+    }
+
+    pub fn select_urls(&self, doc: &Html, page_url: &Url) -> Vec<Url> {
         let href_tags = doc
             .select(&self.href_selector)
             .map(|elem| elem.attr("href").unwrap());

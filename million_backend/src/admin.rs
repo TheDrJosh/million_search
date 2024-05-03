@@ -10,6 +10,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
 };
 
+#[derive(Debug)]
 pub struct AdminServise {
     pub db: DatabaseConnection,
 }

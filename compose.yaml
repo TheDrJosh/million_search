@@ -4,20 +4,44 @@ services:
             context: .
             dockerfile: ./million_backend/Dockerfile
         ports:
-            - "8080:8080"
+          - "8080:8080"
         links:
           - "database:database"
+          - "object_store:object_store"
         develop:
-          watch:
-            - action: rebuild
-              path: ./million_backend
+            watch:
+              - action: rebuild
+                path: ./million_backend
 
     database:
-        image: "postgres:16.2"
+        image: "postgres:latest"
         restart: always
-        shm_size: 128mb
         environment:
             - POSTGRES_USER=million_search
             - POSTGRES_PASSWORD=password1234
         ports:
             - "5432:5432"
+        volumes:
+          - 'database_data:/var/lib/pgsql/data'
+    
+    object_store:
+        image: "minio/minio:latest"
+        ports:
+          - '9001:9001'
+        environment:
+            - MINIO_ROOT_USER=million_search
+            - MINIO_ROOT_PASSWORD=password1234
+            - MINIO_DEFAULT_BUCKETS=million_search
+        volumes:
+          - 'object_store_data:/data'
+
+volumes:
+  object_store_data:
+    driver: local
+  database_data:
+    driver: local
+
+
+        
+
+
