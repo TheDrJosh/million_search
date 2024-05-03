@@ -1,47 +1,57 @@
 services:
-    backend:
-        build: 
-            context: .
-            dockerfile: ./million_backend/Dockerfile
-        ports:
-          - "8080:8080"
-        links:
-          - "database:database"
-          - "object_store:object_store"
-        develop:
-            watch:
-              - action: rebuild
-                path: ./million_backend
+  backend:
+    build:
+      context: .
+      dockerfile: ./million_backend/Dockerfile
+    ports:
+      - '8080:8080'
+    links:
+      - 'database:database'
+      - 'object_store:object_store'
+      - 'search:search'
+    develop:
+      watch:
+        - action: rebuild
+          path: ./million_backend
+    environment:
+      - AWS_ACCESS_KEY_ID=uNnan5X6oygl4NpvZBMf
+      - AWS_SECRET_ACCESS_KEY=ex2UYLzQVpy7qddss0ebQ2jNQYD5BpHI101hPF5t
 
-    database:
-        image: "postgres:latest"
-        restart: always
-        environment:
-            - POSTGRES_USER=million_search
-            - POSTGRES_PASSWORD=password1234
-        ports:
-            - "5432:5432"
-        volumes:
-          - 'database_data:/var/lib/pgsql/data'
-    
-    object_store:
-        image: "minio/minio:latest"
-        ports:
-          - '9001:9001'
-        environment:
-            - MINIO_ROOT_USER=million_search
-            - MINIO_ROOT_PASSWORD=password1234
-            - MINIO_DEFAULT_BUCKETS=million_search
-        volumes:
-          - 'object_store_data:/data'
+  database:
+    image: 'postgres:latest'
+    restart: always
+    environment:
+      - POSTGRES_USER=million_search
+      - POSTGRES_PASSWORD=password1234
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'database_data:/var/lib/pgsql/data'
+
+  object_store:
+    image: 'bitnami/minio:latest'
+    ports:
+      - '9001:9001'
+    environment:
+      - MINIO_ROOT_USER=million_search
+      - MINIO_ROOT_PASSWORD=password1234
+      - MINIO_DEFAULT_BUCKETS=million-search
+    volumes:
+      - 'object_store_data:/data'
+
+  search:
+    image: 'getmeili/meilisearch:latest'
+    environment:
+      - MEILI_ENV=development
+    volumes:
+      - 'search_data:/meili_data'
+    ports:
+      - '7700:7700'
 
 volumes:
   object_store_data:
     driver: local
   database_data:
     driver: local
-
-
-        
-
-
+  search_data:
+    driver: local

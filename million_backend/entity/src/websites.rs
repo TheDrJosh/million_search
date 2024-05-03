@@ -8,8 +8,11 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub url: String,
-    pub mime_type: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
     pub icon_url: Option<String>,
+    pub text_fields: Vec<String>,
+    pub sections: Vec<String>,
     pub created_at: DateTime,
 }
 

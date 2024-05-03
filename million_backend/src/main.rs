@@ -1,8 +1,9 @@
 use admin::AdminServise;
 use crawler::CrawlerServise;
+use meilisearch_sdk::Client;
 use migration::{Migrator, MigratorTrait};
 use proto::tonic::transport::Server;
-use s3::{creds::Credentials, Bucket, BucketConfiguration, Region};
+use s3::{creds::Credentials, Bucket, Region};
 use sea_orm::Database;
 use search::SearchServise;
 
@@ -23,19 +24,30 @@ async fn main() -> anyhow::Result<()> {
 
     let bucket_name = "million_search";
     let region = Region::Custom {
-        region: "minio".to_owned(),
+        region: "eu-central-1".to_owned(),
         endpoint: "http://object_store:9000".to_owned(),
     };
     let credentials = Credentials::default()?;
 
     let bucket = Bucket::new(bucket_name, region.clone(), credentials.clone())?.with_path_style();
 
+    // Connect to meilisearch
+
+    let search_client = Client::new(
+        "http://search:7700",
+        Some("HVIWYFQm8QVl4IcAViNjGMdqbC4tQbGbk2jtpfUqL9Y"),
+    );
+
     // Make grpc endpoint
 
     let addr = "0.0.0.0:8080".parse()?;
 
     let search_servise = SearchServise {};
-    let crawler_servise = CrawlerServise { db: db.clone(), bucket };
+    let crawler_servise = CrawlerServise {
+        db: db.clone(),
+        bucket,
+        search_client,
+    };
     let admin_servise = AdminServise { db };
 
     Server::builder()

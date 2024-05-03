@@ -20,11 +20,11 @@ message ReturnJobRequest {
   string url = 2;
 
   oneof result {
-    ReturnJobRequestOk ok = 3;
-    ReturnJobRequestErr err = 4;
+    Ok ok = 3;
+    Err err = 4;
   }
 
-  message ReturnJobRequestOk {
+  message Ok {
     int32 status = 3;
 
     string MIME_type = 4;
@@ -59,7 +59,7 @@ message ReturnJobRequest {
     message Audio { bytes data = 1; }
   }
 
-  message ReturnJobRequestErr {}
+  message Err {}
 }
 
 message ReturnJobResponse {}

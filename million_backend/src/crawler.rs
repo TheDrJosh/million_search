@@ -2,12 +2,10 @@ use std::{io::Cursor, str::FromStr};
 
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{crawler_queue, websites};
+use meilisearch_sdk::Client;
 use proto::{
     crawler::{
-        return_job_request::{
-            self,
-            return_job_request_ok::{image::Data, Body},
-        },
+        return_job_request::{self},
         GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
         ReturnJobResponse,
     },
@@ -20,10 +18,13 @@ use sea_orm::{
 };
 use url::Url;
 
+use crate::search::WebsiteSearch;
+
 #[derive(Debug)]
 pub struct CrawlerServise {
     pub db: DatabaseConnection,
     pub bucket: Bucket,
+    pub search_client: Client,
 }
 
 #[tonic::async_trait]
@@ -152,20 +153,41 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         }
 
         match result.body {
-            Some(Body::Html(html_body)) => {
+            Some(return_job_request::ok::Body::Html(html_body)) => {
                 let website = websites::ActiveModel {
                     url: ActiveValue::Set(request.url),
-                    mime_type: ActiveValue::Set(result.mime_type),
+                    title: ActiveValue::Set(html_body.title),
+                    description: ActiveValue::Set(html_body.description),
                     icon_url: ActiveValue::Set(html_body.icon_url),
+
+                    text_fields: ActiveValue::Set(html_body.text_fields),
+                    sections: ActiveValue::Set(html_body.sections),
+
                     ..Default::default()
                 };
-                website
+                let website = website
                     .insert(&self.db)
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
+
+                self.search_client
+                    .index("websites")
+                    .add_documents(
+                        &[WebsiteSearch {
+                            id: website.id as i64,
+                            url: website.url,
+                            title: website.title,
+                            description: website.description,
+                            text_fields: website.text_fields,
+                            sections: website.sections,
+                        }],
+                        None,
+                    )
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
             }
-            Some(Body::Image(image_body)) => match image_body.data {
-                Some(Data::Bitmap(bitmap)) => {
+            Some(return_job_request::ok::Body::Image(image_body)) => match image_body.data {
+                Some(return_job_request::ok::image::Data::Bitmap(bitmap)) => {
                     let img = image::io::Reader::new(Cursor::new(bitmap.data))
                         .with_guessed_format()
                         .map_err(|err| Status::from_error(err.into()))?
@@ -189,15 +211,15 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                         .map_err(|err| Status::from_error(err.into()))?;
                 }
 
-                Some(Data::Vector(vector)) => {
+                Some(return_job_request::ok::image::Data::Vector(vector)) => {
                     todo!()
                 }
                 None => {}
             },
-            Some(Body::Video(_video_body)) => {
+            Some(return_job_request::ok::Body::Video(video_body)) => {
                 todo!()
             }
-            Some(Body::Audio(_audio_body)) => {
+            Some(return_job_request::ok::Body::Audio(audio_body)) => {
                 todo!()
             }
             None => {}

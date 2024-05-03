@@ -21,14 +21,30 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Websites::Url).string().not_null())
-                    .col(ColumnDef::new(Websites::MimeType).string().not_null())
+                    .col(ColumnDef::new(Websites::Title).string())
+                    .col(ColumnDef::new(Websites::Description).string())
                     .col(ColumnDef::new(Websites::IconUrl).string())
-                    .col(ColumnDef::new(Websites::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
+                    .col(
+                        ColumnDef::new(Websites::TextFields)
+                            .array(ColumnType::String(None))
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Websites::Sections)
+                            .array(ColumnType::String(None))
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Websites::CreatedAt)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;
 
-            manager
+        manager
             .create_table(
                 Table::create()
                     .table(CrawlerQueue::Table)
@@ -43,8 +59,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(CrawlerQueue::Url).string().not_null())
                     .col(ColumnDef::new(CrawlerQueue::Status).string().not_null())
                     .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp())
-                    .col(ColumnDef::new(CrawlerQueue::LastUpdated).timestamp().default(Expr::current_timestamp()).not_null())
-                    .col(ColumnDef::new(CrawlerQueue::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
+                    .col(
+                        ColumnDef::new(CrawlerQueue::LastUpdated)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CrawlerQueue::CreatedAt)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -59,8 +85,8 @@ impl MigrationTrait for Migration {
             .drop_table(Table::drop().table(Websites::Table).to_owned())
             .await?;
         manager
-        .drop_table(Table::drop().table(CrawlerQueue::Table).to_owned())
-        .await?;
+            .drop_table(Table::drop().table(CrawlerQueue::Table).to_owned())
+            .await?;
 
         Ok(())
     }
@@ -71,8 +97,14 @@ enum Websites {
     Table,
     Id,
     Url,
-    MimeType,
+
+    Title,
+    Description,
     IconUrl,
+
+    TextFields,
+    Sections,
+
     CreatedAt,
 }
 
