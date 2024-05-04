@@ -5,10 +5,10 @@ services:
       dockerfile: ./million_backend/Dockerfile
     ports:
       - '8080:8080'
-    links:
-      - 'database:database'
-      - 'object_store:object_store'
-      - 'search:search'
+    # links:
+    #   - 'database:database'
+    #   - 'object_store:object_store'
+    #   - 'search:search'
     develop:
       watch:
         - action: rebuild
@@ -31,6 +31,7 @@ services:
   object_store:
     image: 'bitnami/minio:latest'
     ports:
+      - '9000:9000'
       - '9001:9001'
     environment:
       - MINIO_ROOT_USER=million_search
