@@ -97,6 +97,14 @@ impl MigrationTrait for Migration {
             .drop_table(Table::drop().table(Image::Table).to_owned())
             .await?;
 
+        manager
+            .drop_table(Table::drop().table(Video::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Audio::Table).to_owned())
+            .await?;
+
         Ok(())
     }
 }

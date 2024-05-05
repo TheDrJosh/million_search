@@ -26,6 +26,8 @@ impl proto::search::search_server::Search for SearchServise {
         &self,
         request: tonic::Request<CompleteSearchRequest>,
     ) -> std::result::Result<tonic::Response<CompleteSearchResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
 
@@ -33,6 +35,8 @@ impl proto::search::search_server::Search for SearchServise {
         &self,
         request: tonic::Request<SearchRequest>,
     ) -> std::result::Result<tonic::Response<SearchWebResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
 
@@ -40,6 +44,8 @@ impl proto::search::search_server::Search for SearchServise {
         &self,
         request: tonic::Request<SearchRequest>,
     ) -> std::result::Result<tonic::Response<SearchImageResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
 
@@ -47,12 +53,16 @@ impl proto::search::search_server::Search for SearchServise {
         &self,
         request: tonic::Request<SearchRequest>,
     ) -> std::result::Result<tonic::Response<SearchVideoResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
     async fn search_audio(
         &self,
         request: tonic::Request<SearchRequest>,
     ) -> std::result::Result<tonic::Response<SearchAudioResponse>, tonic::Status> {
+        let request = request.into_inner();
+
         todo!()
     }
 }

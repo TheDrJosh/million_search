@@ -10,7 +10,7 @@ use proto::{
         ReturnJobResponse,
     },
     tonic::{self, Response, Status},
-};
+}; 
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     QueryFilter,
@@ -76,13 +76,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
     ) -> std::result::Result<tonic::Response<ReturnJobResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        let result = if let Some(result) = request.result {
-            if let return_job_request::Result::Ok(result) = result {
-                result
-            } else {
-                //TODO: increment attemps
-                return Ok(Response::new(ReturnJobResponse {}));
-            }
+        let result = if let Some(return_job_request::Result::Ok(result)) = request.result {
+            result
         } else {
             //TODO: increment attemps
             return Ok(Response::new(ReturnJobResponse {}));
