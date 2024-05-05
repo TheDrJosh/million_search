@@ -1,16 +1,65 @@
 syntax = "proto3";
 package search;
 
-service Search { rpc SearchWeb(SearchWebRequest) returns (SearchWebResponse); }
+import "google/protobuf/duration.proto";
 
-message SearchWebRequest {
-    string query = 1; 
+service Search {
+  rpc CompleteSearch(CompleteSearchRequest) returns (CompleteSearchResponse);
+  rpc SearchWeb(SearchRequest) returns (SearchWebResponse);
+  rpc SearchImage(SearchRequest) returns (SearchImageResponse);
+  rpc SearchVideo(SearchRequest) returns (SearchVideoResponse);
+  rpc SearchAudio(SearchRequest) returns (SearchAudioResponse);
 }
 
-message SearchWebResponse {
-    repeated SearchWebResult results = 1;
-}
+message CompleteSearchRequest { string current = 1; }
+
+message CompleteSearchResponse { repeated string possibilities = 1; }
+
+message SearchRequest { string query = 1; }
+
+message SearchWebResponse { repeated SearchWebResult results = 1; }
 
 message SearchWebResult {
-
+  string url = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional string icon_url = 4;
+  optional string inner_text_match = 5;
 }
+
+message SearchImageResponse { repeated SearchImageResult results = 1; }
+
+message SearchImageResult {
+  string url = 1;
+
+  Size size = 2;
+  message Size {
+    int32 width = 1;
+    int32 height = 2;
+  }
+
+  string format = 3;
+}
+
+message SearchVideoResponse { repeated SearchVideoResult results = 1; }
+
+message SearchVideoResult {
+  string url = 1;
+  int32 width = 2;
+  int32 height = 3;
+  google.protobuf.Duration length = 4;
+  string format = 5;
+}
+
+message SearchAudioResponse { repeated SearchAudioResult results = 1; }
+
+message SearchAudioResult {
+  string url = 1;
+  google.protobuf.Duration length = 2;
+  string format = 3;
+}
+
+// message Duration {
+//   int64 seconds = 1;
+//   int32 nanos = 2;
+// }

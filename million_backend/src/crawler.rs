@@ -1,4 +1,4 @@
-use std::{io::Cursor, str::FromStr};
+use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{crawler_queue, websites};
@@ -11,7 +11,6 @@ use proto::{
     },
     tonic::{self, Response, Status},
 };
-use s3::Bucket;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     QueryFilter,
@@ -23,7 +22,6 @@ use crate::search::WebsiteSearch;
 #[derive(Debug)]
 pub struct CrawlerServise {
     pub db: DatabaseConnection,
-    pub bucket: Bucket,
     pub search_client: Client,
 }
 
@@ -186,36 +184,20 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
             }
-            Some(return_job_request::ok::Body::Image(image_body)) => match image_body.data {
-                Some(return_job_request::ok::image::Data::Bitmap(bitmap)) => {
-                    let img = image::io::Reader::new(Cursor::new(bitmap.data))
-                        .with_guessed_format()
-                        .map_err(|err| Status::from_error(err.into()))?
-                        .decode()
-                        .map_err(|err| Status::from_error(err.into()))?;
+            Some(return_job_request::ok::Body::Image(image_body)) => {
+                // let image = image::ActiveModel {
+                //     url: ActiveValue::Set(request.url),
+                //     title: ActiveValue::Set(html_body.title),
+                //     description: ActiveValue::Set(html_body.description),
+                //     icon_url: ActiveValue::Set(html_body.icon_url),
 
-                    let img = if img.width() > 256 || img.height() > 256 {
-                        img.resize(256, 256, image::imageops::FilterType::Gaussian)
-                    } else {
-                        img
-                    };
+                //     text_fields: ActiveValue::Set(html_body.text_fields),
+                //     sections: ActiveValue::Set(html_body.sections),
 
-                    let mut img_av1 = Vec::new();
-
-                    img.write_to(&mut Cursor::new(&mut img_av1), image::ImageFormat::Avif)
-                        .map_err(|err| Status::from_error(err.into()))?;
-
-                    self.bucket
-                        .put_object(request.url, &img_av1)
-                        .await
-                        .map_err(|err| Status::from_error(err.into()))?;
-                }
-
-                Some(return_job_request::ok::image::Data::Vector(vector)) => {
-                    todo!()
-                }
-                None => {}
-            },
+                //     ..Default::default()
+                // };
+                todo!()
+            }
             Some(return_job_request::ok::Body::Video(video_body)) => {
                 todo!()
             }
