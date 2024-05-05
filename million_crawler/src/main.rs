@@ -1,6 +1,8 @@
 use std::time::Duration;
 
+use clap::Parser;
 use exponential_backoff::Backoff;
+use lazy_static::lazy_static;
 use proto::{
     crawler::{
         crawler_client::CrawlerClient,
@@ -15,13 +17,24 @@ use crate::selector_set::SelectorSet;
 
 mod selector_set;
 
+lazy_static! {
+    static ref SELECTOR: SelectorSet = SelectorSet::new();
+}
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value_t = String::from("http://localhost:8080"))]
+    endpoint: String,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // TODO: Make config
-
     tracing_subscriber::fmt().init();
 
-    let mut client = CrawlerClient::connect("http://localhost:8080").await?;
+    let args = Args::parse();
+
+    let mut client = CrawlerClient::connect(args.endpoint).await?;
 
     loop {
         let job = get_job(&mut client).await?;
@@ -62,41 +75,68 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
         .flatten()
         .unwrap_or_default();
 
-    if !(mime_type.is_empty() || mime_type.contains("html")) {
-        return Ok(return_job_request::Ok {
+    let ret = if mime_type.is_empty() || mime_type.contains("html") {
+        let text = res.text().await?;
+
+        let html = scraper::Html::parse_document(&text);
+
+        let job_url = job.url.parse()?;
+
+        let urls = SELECTOR.select_urls(&html, &job_url);
+
+        return_job_request::Ok {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
+            body: Some(return_job_request::ok::Body::Html(
+                return_job_request::ok::Html {
+                    title: SELECTOR.select_title(&html),
+                    description: SELECTOR.select_description(&html),
+                    icon_url: SELECTOR
+                        .select_icon_url(&html, &job_url)
+                        .map(|url| url.to_string()),
+                    text_fields: SELECTOR.select_text_fields(&html),
+                    sections: SELECTOR.select_sections(&html),
+                },
+            )),
+        }
+    } else if mime_type.contains("image") {
+        return_job_request::Ok {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: vec![],
+            body: Some(return_job_request::ok::Body::Image(
+                return_job_request::ok::Image { size: None },
+            )),
+        }
+    } else if mime_type.contains("video") {
+        return_job_request::Ok {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: vec![],
+            body: Some(return_job_request::ok::Body::Video(
+                return_job_request::ok::Video {
+                    size: None,
+                    length: None,
+                },
+            )),
+        }
+    } else if mime_type.contains("audio") {
+        return_job_request::Ok {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: vec![],
+            body: Some(return_job_request::ok::Body::Audio(
+                return_job_request::ok::Audio { length: None },
+            )),
+        }
+    } else {
+        return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
             linked_urls: vec![],
             body: None,
-        });
-    }
-
-    let text = res.text().await?;
-
-    let html = scraper::Html::parse_document(&text);
-
-    //TODO: Make Global
-    let selector = SelectorSet::new();
-
-    let job_url = job.url.parse()?;
-
-    let urls = selector.select_urls(&html, &job_url);
-
-    let ret = return_job_request::Ok {
-        status: status.as_u16() as i32,
-        mime_type,
-        linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
-        body: Some(return_job_request::ok::Body::Html(
-            return_job_request::ok::Html {
-                title: selector.select_title(&html),
-                description: selector.select_description(&html),
-                icon_url: selector
-                    .select_icon_url(&html, &job_url)
-                    .map(|url| url.to_string()),
-                text_fields: selector.select_text_fields(&html),
-                sections: selector.select_sections(&html),
-            },
-        )),
+        }
     };
 
     Ok(ret)

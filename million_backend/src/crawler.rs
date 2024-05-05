@@ -10,7 +10,7 @@ use proto::{
         ReturnJobResponse,
     },
     tonic::{self, Response, Status},
-}; 
+};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     QueryFilter,
@@ -168,29 +168,18 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     .add_documents(
                         &[WebsiteSearch {
                             id: website.id as i64,
-                            url: website.url,
+                            url: website.url.clone(),
                             title: website.title,
                             description: website.description,
                             text_fields: website.text_fields,
                             sections: website.sections,
                         }],
-                        None,
+                        Some(&website.url),
                     )
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
             }
             Some(return_job_request::ok::Body::Image(image_body)) => {
-                // let image = image::ActiveModel {
-                //     url: ActiveValue::Set(request.url),
-                //     title: ActiveValue::Set(html_body.title),
-                //     description: ActiveValue::Set(html_body.description),
-                //     icon_url: ActiveValue::Set(html_body.icon_url),
-
-                //     text_fields: ActiveValue::Set(html_body.text_fields),
-                //     sections: ActiveValue::Set(html_body.sections),
-
-                //     ..Default::default()
-                // };
                 todo!()
             }
             Some(return_job_request::ok::Body::Video(video_body)) => {
