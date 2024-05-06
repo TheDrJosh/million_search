@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.5"
-clap = "4.5.4"
+clap = { version = "4.5.4", features = ["derive", "env"] }
 maud = { version = "0.26.0", features = ["axum"] }
 tokio = { version = "1.37.0", features = ["full"] }
 tonic = "0.11.0"
@@ -16,3 +16,4 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 proto = { path = "../proto" }
 anyhow = { version = "1.0.82", features = ["backtrace"] }
 serde = { version = "1.0.200", features = ["derive"] }
+tower-http = { version = "0.5.2", features = ["fs", "trace"] }

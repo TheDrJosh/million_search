@@ -6,16 +6,23 @@ use std::{
 
 use axum::{extract::State, http::StatusCode, routing::get, Form, Router};
 use clap::Parser;
+use home::home_search_page;
 use maud::Markup;
 use proto::search::search_client::SearchClient;
+use search::search_page;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
+use tower_http::services::{ServeDir, ServeFile};
+
+mod home;
+mod search;
+mod utils;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value_t = String::from("http://localhost:8080"))]
+    #[arg(short, long, default_value_t = String::from("http://backend:8080"))]
     endpoint: String,
     #[arg(short, long, default_value_t = 3000)]
     port: u16,
@@ -46,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/image/search", get(search_image))
         .route("/video/search", get(search_video))
         .route("/audio/search", get(search_audio))
+        .nest_service("/public", ServeDir::new("public"))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
@@ -67,20 +75,16 @@ enum SearchType {
 }
 
 async fn home_search_html() -> Result<Markup, StatusCode> {
-    home_search(SearchType::Html).await
+    home_search_page(SearchType::Html).await
 }
 async fn home_search_image() -> Result<Markup, StatusCode> {
-    home_search(SearchType::Image).await
+    home_search_page(SearchType::Image).await
 }
 async fn home_search_video() -> Result<Markup, StatusCode> {
-    home_search(SearchType::Video).await
+    home_search_page(SearchType::Video).await
 }
 async fn home_search_audio() -> Result<Markup, StatusCode> {
-    home_search(SearchType::Audio).await
-}
-
-async fn home_search(search_type: SearchType) -> Result<Markup, StatusCode> {
-    todo!()
+    home_search_page(SearchType::Audio).await
 }
 
 #[derive(Deserialize)]
@@ -108,7 +112,7 @@ async fn search_html(
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, StatusCode> {
     match query.extra {
-        None => search(SearchType::Html, query, state).await,
+        None => search_page(SearchType::Html, query, state).await,
         Some(_) => Err(StatusCode::BAD_REQUEST),
     }
 }
@@ -121,7 +125,7 @@ async fn search_image(
             width: _,
             height: _,
         })
-        | None => search(SearchType::Html, query, state).await,
+        | None => search_page(SearchType::Image, query, state).await,
         Some(_) => Err(StatusCode::BAD_REQUEST),
     }
 }
@@ -135,7 +139,7 @@ async fn search_video(
             height: _,
             length: _,
         })
-        | None => search(SearchType::Html, query, state).await,
+        | None => search_page(SearchType::Video, query, state).await,
         Some(_) => Err(StatusCode::BAD_REQUEST),
     }
 }
@@ -145,16 +149,8 @@ async fn search_audio(
 ) -> Result<Markup, StatusCode> {
     match query.extra {
         Some(ExtraSearchQuery::Audio { length: _ }) | None => {
-            search(SearchType::Html, query, state).await
+            search_page(SearchType::Audio, query, state).await
         }
         Some(_) => Err(StatusCode::BAD_REQUEST),
     }
-}
-
-async fn search(
-    search_type: SearchType,
-    query: SearchQuery,
-    state: Arc<AppState>,
-) -> Result<Markup, StatusCode> {
-    todo!()
 }
