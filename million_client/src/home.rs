@@ -20,6 +20,22 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
 
     Ok(basic_page(html! {
         div class="h-lvh flex flex-col items-center justify-center dark:bg-zinc-800 dark:text-zinc-50" {
+            div class="ml-2 flex flex-row gap-4 self-start" {
+                @if search_type != SearchType::Html {
+                    a href="/" {
+                        "<"
+                    }
+                }
+                a href="/image" {
+                    "Images"
+                }
+                a href="video" {
+                    "Videos"
+                }
+                a href="audio" {
+                    "Audio"
+                }
+            }
             div class="flex-1" {}
 
             div class="flex-1 flex flex-col" {
