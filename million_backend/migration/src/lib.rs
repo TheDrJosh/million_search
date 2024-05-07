@@ -2,6 +2,7 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20220101_000001_create_table;
 mod m20240505_025740_more_types;
+mod m20240507_052759_meilisync;
 
 pub struct Migrator;
 
@@ -11,6 +12,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20220101_000001_create_table::Migration),
             Box::new(m20240505_025740_more_types::Migration),
+            // Box::new(m20240507_052759_meilisync::Migration),
         ]
     }
 }

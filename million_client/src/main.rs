@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState {
         client: Mutex::new(client),
     });
-
+ 
     let app = Router::new()
         .route("/", get(home_search_html))
         .route("/image", get(home_search_image))

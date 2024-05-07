@@ -9,6 +9,9 @@ services:
       watch:
         - action: rebuild
           path: ./million_backend
+    depends_on:
+      - database
+      - meilisearch
   frontend:
     build:
       context: .
@@ -19,9 +22,13 @@ services:
       watch:
         - action: rebuild
           path: ./million_client
+    depends_on:
+      - backend
+          
   database:
-    image: 'postgres:latest'
-    # restart: always
+    build:
+      context: .
+      dockerfile: ./postgres.Dockerfile
     environment:
       - POSTGRES_USER=million_search
       - POSTGRES_PASSWORD=password1234
@@ -29,7 +36,7 @@ services:
       - '5432:5432'
     volumes:
       - 'database_data:/var/lib/pgsql/data'
-  search:
+  meilisearch:
     image: 'getmeili/meilisearch:latest'
     environment:
       - MEILI_ENV=development
@@ -37,6 +44,13 @@ services:
       - 'search_data:/meili_data'
     ports:
       - '7700:7700'
+  meilisync:
+    image: long2ice/meilisync:sha-052c4de
+    volumes:
+      - ./meilisync_config.yml:/meilisync/config.yml
+    depends_on:
+      - database
+      - meilisearch
 
 volumes:
   database_data:

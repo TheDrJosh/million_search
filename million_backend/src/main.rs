@@ -37,6 +37,8 @@ async fn main() -> anyhow::Result<()> {
     };
     let admin_servise = AdminServise { db };
 
+    println!("Starting");
+
     Server::builder()
         .add_service(proto::search::search_server::SearchServer::new(
             search_servise,
