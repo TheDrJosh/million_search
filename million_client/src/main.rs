@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         client: Mutex::new(client),
     });
  
-    let app = Router::new()
+    let app = Router::new() 
         .route("/", get(home_search_html))
         .route("/image", get(home_search_image))
         .route("/video", get(home_search_video))

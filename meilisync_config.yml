@@ -9,7 +9,7 @@ source:
   database: million_search
 meilisearch:
   api_url: http://meilisearch:7700/
-  api_key: '8BG2dieXqsN4e8CXFUnab89M8u-T0_BREDE8tY3AeDQ'
+  api_key: 'qGSFjWWRltnt_86sFhLRkEbSaEO00Jj06LbsLyZ68kw'
   insert_size: 1000
   insert_interval: 10
 sync:

@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     let search_client = Client::new(
         "http://search:7700",
-        Some("HVIWYFQm8QVl4IcAViNjGMdqbC4tQbGbk2jtpfUqL9Y"),
+        Some("qGSFjWWRltnt_86sFhLRkEbSaEO00Jj06LbsLyZ68kw"),
     );
 
     // Make grpc endpoint

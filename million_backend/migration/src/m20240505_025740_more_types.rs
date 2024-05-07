@@ -46,11 +46,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Video::Url).string().not_null())
                     .col(ColumnDef::new(Video::Width).integer().not_null())
                     .col(ColumnDef::new(Video::Height).integer().not_null())
-                    .col(
-                        ColumnDef::new(Video::Length)
-                            .interval(None, None)
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Video::LengthMillis).integer().not_null())
                     .col(
                         ColumnDef::new(Video::CreatedAt)
                             .timestamp()
@@ -75,8 +71,8 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Audio::Url).string().not_null())
                     .col(
-                        ColumnDef::new(Audio::Length)
-                            .interval(None, None)
+                        ColumnDef::new(Audio::LengthMillis)
+                            .integer()
                             .not_null(),
                     )
                     .col(
@@ -126,7 +122,7 @@ enum Video {
     Url,
     Width,
     Height,
-    Length,
+    LengthMillis,
     CreatedAt,
 }
 
@@ -135,6 +131,6 @@ enum Audio {
     Table,
     Id,
     Url,
-    Length,
+    LengthMillis,
     CreatedAt,
 }

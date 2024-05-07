@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
-use entity::{crawler_queue, websites};
+use entity::{audio, crawler_queue, image, video, websites};
 use meilisearch_sdk::Client;
 use proto::{
     crawler::{
@@ -16,8 +16,6 @@ use sea_orm::{
     QueryFilter,
 };
 use url::Url;
-
-use crate::search::WebsiteSearch;
 
 #[derive(Debug)]
 pub struct CrawlerServise {
@@ -158,35 +156,76 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
                     ..Default::default()
                 };
-                let website = website
+                website
                     .insert(&self.db)
-                    .await
-                    .map_err(|err| Status::from_error(err.into()))?;
-
-                self.search_client
-                    .index("websites")
-                    .add_documents(
-                        &[WebsiteSearch {
-                            id: website.id as i64,
-                            url: website.url.clone(),
-                            title: website.title,
-                            description: website.description,
-                            text_fields: website.text_fields,
-                            sections: website.sections,
-                        }],
-                        Some(&website.url),
-                    )
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
             }
             Some(return_job_request::ok::Body::Image(image_body)) => {
-                todo!()
+                let (width, height) = if let Some(size) = image_body.size {
+                    (Some(size.width), Some(size.height))
+                } else {
+                    (None, None)
+                };
+                let image = image::ActiveModel {
+                    url: ActiveValue::Set(request.url),
+                    width: ActiveValue::Set(width),
+                    height: ActiveValue::Set(height),
+                    ..Default::default()
+                };
+                image
+                    .insert(&self.db)
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
             }
             Some(return_job_request::ok::Body::Video(video_body)) => {
-                todo!()
+                let (width, height) = if let Some(size) = video_body.size {
+                    (size.width, size.height)
+                } else {
+                    return Err(Status::invalid_argument("video size must exist"));
+                };
+                let video = video::ActiveModel {
+                    url: ActiveValue::Set(request.url),
+                    width: ActiveValue::Set(width),
+                    height: ActiveValue::Set(height),
+                    length_millis: ActiveValue::Set(
+                        video_body
+                            .length
+                            .ok_or(Status::invalid_argument("length must exist"))
+                            .map(|dir| {
+                                Duration::new(dir.seconds, dir.nanos as u32)
+                                    .ok_or(Status::invalid_argument("invalid length"))
+                                    .map(|dir| dir.num_milliseconds())
+                            })?? as i32,
+                    ),
+
+                    ..Default::default()
+                };
+                video
+                    .insert(&self.db)
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
             }
             Some(return_job_request::ok::Body::Audio(audio_body)) => {
-                todo!()
+                let audio = audio::ActiveModel {
+                    url: ActiveValue::Set(request.url),
+                    length_millis: ActiveValue::Set(
+                        audio_body
+                            .length
+                            .ok_or(Status::invalid_argument("length must exist"))
+                            .map(|dir| {
+                                Duration::new(dir.seconds, dir.nanos as u32)
+                                    .ok_or(Status::invalid_argument("invalid length"))
+                                    .map(|dir| dir.num_milliseconds())
+                            })?? as i32,
+                    ),
+
+                    ..Default::default()
+                };
+                audio
+                    .insert(&self.db)
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
             }
             None => {}
         }
