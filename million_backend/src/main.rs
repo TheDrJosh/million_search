@@ -23,14 +23,17 @@ async fn main() -> anyhow::Result<()> {
 
     let search_client = Client::new(
         "http://search:7700",
-        Some("qGSFjWWRltnt_86sFhLRkEbSaEO00Jj06LbsLyZ68kw"),
+        Some("4m-VT7nEPBGNEbM9nJWKRaeqB6o2tgmUwlbJjqPNx2E"),
     );
 
     // Make grpc endpoint
 
     let addr = "0.0.0.0:8080".parse()?;
 
-    let search_servise = SearchServise {};
+    let search_servise = SearchServise {
+        db: db.clone(),
+        search_client: search_client.clone(),
+    };
     let crawler_servise = CrawlerServise {
         db: db.clone(),
         search_client,

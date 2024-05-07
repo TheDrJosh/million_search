@@ -17,10 +17,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Step 2: Cache project dependencies
 FROM rust as cacher
 WORKDIR /usr/src/million
-RUN apt-get update && apt-get upgrade -y && \
+RUN cargo install cargo-chef
+RUN apt-get update && \
     apt-get install -y nodejs \
     npm
-RUN cargo install cargo-chef
 COPY --from=planner /usr/src/million/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY --from=planner /usr/src/million/million_client/package.json package.json
@@ -30,10 +30,9 @@ RUN npm i
 # Step 3: Build the binary
 FROM rust as builder
 WORKDIR /usr/src/million
-RUN apt-get update && apt-get install -y protobuf-compiler
-RUN apt-get update && apt-get upgrade -y && \
+RUN apt-get update && \
     apt-get install -y nodejs \
-    npm
+    npm protobuf-compiler
 COPY . .
 # Copy over the cached dependencies from above
 COPY --from=cacher /usr/src/million/node_modules million_client/node_modules

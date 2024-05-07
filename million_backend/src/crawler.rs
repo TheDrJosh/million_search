@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::{audio, crawler_queue, image, video, websites};
 use meilisearch_sdk::Client;
-use proto::{
+use proto::{ 
     crawler::{
         return_job_request::{self},
         GetJobRequest, GetJobResponse, KeepAliveJobRequest, KeepAliveJobResponse, ReturnJobRequest,
