@@ -1,3 +1,4 @@
+use entity::search_history;
 use meilisearch_sdk::Client;
 use proto::{
     search::{
@@ -7,7 +8,7 @@ use proto::{
     },
     tonic::{self, Status},
 };
-use sea_orm::DatabaseConnection;
+use sea_orm::{ActiveModelTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,6 +35,14 @@ impl proto::search::search_server::Search for SearchServise {
     ) -> std::result::Result<tonic::Response<CompleteSearchResponse>, tonic::Status> {
         let request = request.into_inner();
 
+        // let results: SearchResults<Movie> = client
+        //     .index("movies")
+        //     .search()
+        //     .with_query("botman")
+        //     .execute()
+        //     .await
+        //     .unwrap();
+
         todo!()
     }
 
@@ -47,7 +56,7 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.search_client, &query.query)
+        save_search_to_history(&self.db, query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
 
@@ -72,7 +81,7 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.search_client, &query.query)
+        save_search_to_history(&self.db, query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
         todo!()
@@ -87,7 +96,7 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.search_client, &query.query)
+        save_search_to_history(&self.db, query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
         todo!()
@@ -101,15 +110,20 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.search_client, &query.query)
+        save_search_to_history(&self.db, query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
         todo!()
     }
 }
 
-async fn save_search_to_history(client: &Client, search: &str) -> anyhow::Result<()> {
-    todo!()
+async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyhow::Result<()> {
+    let search = search_history::ActiveModel {
+        text: sea_orm::ActiveValue::Set(search),
+        ..Default::default()
+    };
+    search.insert(db).await?;
+    Ok(())
 }
 
 // struct Websites {

@@ -17,18 +17,44 @@ sync:
   index: websites
   pk: id
   full: true
+  fields:
+    id:
+    url:
+    title:
+    description:
+    sections:
+
 - table: image
   index: image
   pk: id
   full: true
+  fields:
+    id:
+    url:
+
 - table: video
   index: video
   pk: id
   full: true
+  fields:
+    id:
+    url:
+
 - table: audio
   index: audio
   pk: id
   full: true
+  fields:
+    id:
+    url:
+
+- table: search_history
+  index: audio
+  pk: id
+  full: true
+  fields:
+    id:
+    text:
 
 progress:
   type: file

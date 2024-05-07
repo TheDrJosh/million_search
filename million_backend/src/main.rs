@@ -26,6 +26,8 @@ async fn main() -> anyhow::Result<()> {
         Some("4m-VT7nEPBGNEbM9nJWKRaeqB6o2tgmUwlbJjqPNx2E"),
     );
 
+    //TODO - Set Searchable feilds
+
     // Make grpc endpoint
 
     let addr = "0.0.0.0:8080".parse()?;
