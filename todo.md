@@ -7,3 +7,4 @@
 - [ ] read robot.txt
 - [ ] read manifest.json
 - [ ] read meta keywords
+- [ ] search complete

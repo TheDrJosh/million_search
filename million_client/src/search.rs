@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::http::StatusCode;
 use maud::{html, Markup};
+
 use proto::search::{SearchWebRequest, SearchWebResult};
 
 use crate::{utils::basic_page, AppState, SearchQuery, SearchQueryList, SearchType};
@@ -9,7 +10,7 @@ use crate::{utils::basic_page, AppState, SearchQuery, SearchQueryList, SearchTyp
 pub async fn search_page(
     search_type: SearchType,
     query: SearchQuery,
-    state: Arc<AppState>,
+    _state: Arc<AppState>,
 ) -> Result<Markup, StatusCode> {
     let url_params =
         serde_url_params::to_string(&query).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -94,7 +95,7 @@ pub async fn search_page(
                     form action="/search" autocomplete="off" class="flex flex-row items-center" {
                         object data="/public/search.svg" type="image/svg+xml" class="h-4 -mr-8 z-10 filter dark:invert" {}
 
-                        input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700"
+                        input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 min-w-0"
                             type="search" name="query" id="query" size="60" value=(query.query) {}
                     }
                 }
@@ -114,7 +115,7 @@ pub async fn search_page(
                 }
             }
 
-            div class="flex-1 mx-6 my-4 overflow-y-scroll w-full" {
+            div class="flex-1 px-6 pt-4 overflow-y-scroll w-full" {
                 (surrounding_formating)
             }
 
@@ -165,7 +166,7 @@ async fn search_page_results_html(
 
     let search_params = serde_json::to_string(&SearchQueryList {
         query: query.clone(),
-        start,
+        start: start + length,
         length,
         extra: None,
     })
@@ -186,26 +187,23 @@ fn render_html_result(result: &SearchWebResult) -> Markup {
         div class="my-4 flex flex-col" {
             a href=(result.url) {
                 div class="flex flex-row items-center" {
-                    @if let Some(icon_url) = &result.icon_url {
-                        img class="w-6 h-6" src=(icon_url) {}
-                    } @else {
-                        img class="w-6 h-6 dark:invert" src="/public/gloabe.svg" {}
-                    }
+                    img class="w-8 h-8 bg-white rounded-full p-1" src=(result.icon_url.as_deref().unwrap_or("/public/gloabe.svg")) {}
+                    
                     div class="flex flex-col ml-4" {
-                        span class="font-semibold" {
+                        span class="font-semibold truncate" {
                             (result.title.as_deref().unwrap_or("Site Name Placeholder"))
                         }
-                        span class="text-sm" {
+                        span class="text-sm truncate" {
                             (&result.url)
                         }
                     }
                 }
-                h2 class="text-lg font-bold" {
+                h2 class="text-lg font-bold truncate" {
                     (result.title.as_deref().unwrap_or(&result.url))
                 }
             }
             @if result.inner_text_match.is_some() || result.description.is_some() {
-                p class="w-1/2 sm:w-full" {
+                p class="w-full sm:w-1/2" {
                     (result.inner_text_match.as_deref().or(result.description.as_deref()).unwrap())
                 }
             }
