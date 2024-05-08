@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
 use tower_http::services::ServeDir;
-use tower_livereload::LiveReloadLayer;
 use tracing_subscriber::EnvFilter;
 use utils::search_suggestions;
 mod home;
@@ -75,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
         .nest_service("/public", ServeDir::new("public"))
         .with_state(state);
 
-    let app = app.layer(LiveReloadLayer::new().reload_interval(Duration::from_millis(200)));
+    // let app = app.layer(LiveReloadLayer::new().reload_interval(Duration::from_millis(200)));
 
     let listener = tokio::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
         Ipv4Addr::new(0, 0, 0, 0),

@@ -27,10 +27,15 @@ pub fn basic_page(body: Markup) -> Markup {
 
 pub fn search_bar(query: &str) -> Markup {
     html! {
-        input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 min-w-0"
-            type="search" name="query" id="query" size="60" value=(query) list="search-suggestions"
-            hx-post="/search-suggestions" hx-target="#search-suggestions" hx-trigger="keyup changed throttle:500ms" {}
-        datalist id="search-suggestions" {}
+        div class="flex flex-col border-black border px-4 py-2 dark:bg-zinc-800 dark:border-zinc-700 rounded-xl" {
+            object data="public/search.svg" type="image/svg+xml" class="h-4 filter dark:invert" {}
+            input class="resize-none min-w-0 peer hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700"
+                type="search" name="query" id="query" size="60" value=(query)
+                hx-post="/search-suggestions" hx-target="#search-suggestions" hx-trigger="keyup changed, click" {}
+
+
+            div id="search-suggestions" class="invisible peer-focus:visible" {}
+        }
     }
 }
 
@@ -58,7 +63,9 @@ pub async fn search_suggestions(
 
     Ok(html! {
         @for possibilitie in possibilities {
-            option value=(possibilitie) {}
+            div {
+                (possibilitie)
+            }
         }
     })
 }
