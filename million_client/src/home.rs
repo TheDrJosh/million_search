@@ -1,7 +1,10 @@
 use axum::http::StatusCode;
 use maud::{html, Markup};
 
-use crate::{utils::basic_page, SearchType};
+use crate::{
+    utils::{basic_page, search_bar},
+    SearchType,
+};
 
 pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusCode> {
     let sub_text = match search_type {
@@ -50,8 +53,9 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
                 form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
                     object data="public/search.svg" type="image/svg+xml" class="h-4 -mr-8 z-10 filter dark:invert" {}
 
-                    input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700"
-                        type="search" name="query" id="query" size="60" value="" {}
+                    // input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700"
+                    //     type="search" name="query" id="query" size="60" value="" {}
+                    (search_bar(""))
                 }
             }
 

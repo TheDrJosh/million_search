@@ -5,7 +5,10 @@ use maud::{html, Markup};
 
 use proto::search::{SearchWebRequest, SearchWebResult};
 
-use crate::{utils::basic_page, AppState, SearchQuery, SearchQueryList, SearchType};
+use crate::{
+    utils::{basic_page, search_bar},
+    AppState, SearchQuery, SearchQueryList, SearchType,
+};
 
 pub async fn search_page(
     search_type: SearchType,
@@ -95,8 +98,9 @@ pub async fn search_page(
                     form action="/search" autocomplete="off" class="flex flex-row items-center" {
                         object data="/public/search.svg" type="image/svg+xml" class="h-4 -mr-8 z-10 filter dark:invert" {}
 
-                        input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 min-w-0"
-                            type="search" name="query" id="query" size="60" value=(query.query) {}
+                        // input class="border-black border resize-none pl-10 pr-4 py-2 rounded-full hover:bg-neutral-100 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 min-w-0"
+                        //     type="search" name="query" id="query" size="60" value=(query.query) {}
+                        (search_bar(&query.query))
                     }
                 }
                 div class="flex flex-row gap-4 self-start pl-4 pt-2" {
@@ -118,6 +122,7 @@ pub async fn search_page(
             div class="flex-1 px-6 pt-4 overflow-y-scroll w-full" {
                 (surrounding_formating)
             }
+
 
             footer class="bg-neutral-100 grid dark:bg-zinc-900 grid-cols-3 w-full px-4 py-2 gap-2" {
                 a href="https://dryicons.com/icon/search-2621" {"Icon by Dryicons"}
@@ -188,7 +193,7 @@ fn render_html_result(result: &SearchWebResult) -> Markup {
             a href=(result.url) {
                 div class="flex flex-row items-center" {
                     img class="w-8 h-8 bg-white rounded-full p-1" src=(result.icon_url.as_deref().unwrap_or("/public/gloabe.svg")) {}
-                    
+
                     div class="flex flex-col ml-4" {
                         span class="font-semibold truncate" {
                             (result.title.as_deref().unwrap_or("Site Name Placeholder"))

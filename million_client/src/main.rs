@@ -4,7 +4,12 @@ use std::{
     time::Duration,
 };
 
-use axum::{extract::State, http::StatusCode, routing::get, Form, Router};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    routing::{get, post},
+    Form, Router,
+};
 use clap::Parser;
 use home::home_search_page;
 use maud::Markup;
@@ -16,6 +21,7 @@ use tonic::transport::Channel;
 use tower_http::services::ServeDir;
 use tower_livereload::LiveReloadLayer;
 use tracing_subscriber::EnvFilter;
+use utils::search_suggestions;
 mod home;
 mod search;
 mod utils;
@@ -65,6 +71,7 @@ async fn main() -> anyhow::Result<()> {
             "/audio/search",
             get(search_audio).post(search_audio_results),
         )
+        .route("/search-suggestions", post(search_suggestions))
         .nest_service("/public", ServeDir::new("public"))
         .with_state(state);
 
