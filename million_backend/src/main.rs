@@ -22,11 +22,36 @@ async fn main() -> anyhow::Result<()> {
     // Connect to meilisearch
 
     let search_client = Client::new(
-        "http://search:7700",
-        Some("4m-VT7nEPBGNEbM9nJWKRaeqB6o2tgmUwlbJjqPNx2E"),
+        "http://meilisearch:7700",
+        Some("-r_i6i4t88jTzlWtNIyVr0VybDBdn2it428fxr2Blcg"),
     );
 
     //TODO - Set Searchable feilds
+
+    search_client
+        .index("websites")
+        .set_searchable_attributes(["url", "title", "description", "text_fields", "sections"])
+        .await?;
+
+    search_client
+        .index("image")
+        .set_searchable_attributes(["url"])
+        .await?;
+
+    search_client
+        .index("video")
+        .set_searchable_attributes(["url"])
+        .await?;
+
+    search_client
+        .index("audio")
+        .set_searchable_attributes(["url"])
+        .await?;
+
+    search_client
+        .index("search_history")
+        .set_searchable_attributes(["text"])
+        .await?;
 
     // Make grpc endpoint
 

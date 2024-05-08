@@ -18,3 +18,5 @@ chrono = "0.4.38"
 url = "2.5.0"
 meilisearch-sdk = "0.25.0"
 serde = { version = "1.0.200", features = ["derive"] }
+futures = "0.3.30"
+serde_json = "1.0.116"

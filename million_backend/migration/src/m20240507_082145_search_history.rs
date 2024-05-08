@@ -22,6 +22,7 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(SearchHistory::CreatedAt)
                             .timestamp()
+                            .default(Expr::current_timestamp())
                             .not_null(),
                     )
                     .to_owned(),

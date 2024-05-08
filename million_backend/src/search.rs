@@ -1,14 +1,15 @@
-use entity::search_history;
-use meilisearch_sdk::Client;
+use entity::{search_history, websites};
+use futures::future::join_all;
+use meilisearch_sdk::{Client, SearchResults};
 use proto::{
     search::{
         CompleteSearchRequest, CompleteSearchResponse, SearchAudioRequest, SearchAudioResponse,
         SearchImageRequest, SearchImageResponse, SearchVideoRequest, SearchVideoResponse,
-        SearchWebRequest, SearchWebResponse,
+        SearchWebRequest, SearchWebResponse, SearchWebResult,
     },
-    tonic::{self, Status},
+    tonic::{self, Response, Status},
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,15 +36,24 @@ impl proto::search::search_server::Search for SearchServise {
     ) -> std::result::Result<tonic::Response<CompleteSearchResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        // let results: SearchResults<Movie> = client
-        //     .index("movies")
-        //     .search()
-        //     .with_query("botman")
-        //     .execute()
-        //     .await
-        //     .unwrap();
+        let partial_query = request.current;
 
-        todo!()
+        let results: SearchResults<SearchHistory> = self
+            .search_client
+            .index("search_history")
+            .search()
+            .with_query(&partial_query)
+            .execute()
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        let res: Vec<String> = results
+            .hits
+            .into_iter()
+            .map(|search| search.result.text)
+            .collect();
+
+        return Ok(Response::new(CompleteSearchResponse { possibilities: res }));
     }
 
     async fn search_web(
@@ -56,20 +66,45 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.db, query.query)
+        save_search_to_history(&self.db, query.query.clone())
             .await
             .map_err(|err| Status::from_error(err.into()))?;
 
-        // let result: SearchResults<> = self
-        //     .search_client
-        //     .index("websites")
-        //     .search()
-        //     .with_query(&query.query)
-        //     .execute()
-        //     .await
-        //     .map_err(|err| Status::from_error(err.into()))?;
+        let result: SearchResults<Websites> = self
+            .search_client
+            .index("websites")
+            .search()
+            .with_query(&query.query)
+            .execute()
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
 
-        todo!()
+        let list = join_all(
+            result
+                .hits
+                .iter()
+                .skip(query.start as usize)
+                .take(query.length as usize)
+                .map(|web| websites::Entity::find_by_id(web.result.id as i32).one(&self.db)),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Option<Vec<_>>, _>>()
+        .map_err(|err| Status::from_error(err.into()))?
+        .ok_or(Status::internal("desync between postgres and meiliseach"))?;
+
+        let results = list
+            .into_iter()
+            .map(|model| SearchWebResult {
+                url: model.url,
+                title: model.title,
+                description: model.description,
+                icon_url: model.icon_url,
+                inner_text_match: None,
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Response::new(SearchWebResponse { results }))
     }
 
     async fn search_image(
@@ -126,7 +161,36 @@ async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyh
     Ok(())
 }
 
-// struct Websites {
-//     id: i64,
+#[derive(Serialize, Deserialize)]
+struct Websites {
+    id: i64,
+    url: String,
+    // title: Option<String>,
+    // description: Option<String>,
+    // text_fields: Vec<String>,
+    // sections: Vec<String>,
+}
 
-// }
+#[derive(Serialize, Deserialize)]
+struct Image {
+    id: i64,
+    url: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Video {
+    id: i64,
+    url: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Audio {
+    id: i64,
+    url: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SearchHistory {
+    id: i64,
+    text: String,
+}

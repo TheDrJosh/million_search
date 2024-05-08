@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use maud::{html, Markup};
 use proto::search::{SearchWebRequest, SearchWebResult};
 
-use crate::{utils::basic_page, AppState, SearchQuery, SearchType};
+use crate::{utils::basic_page, AppState, SearchQuery, SearchQueryList, SearchType};
 
 pub async fn search_page(
     search_type: SearchType,
@@ -14,7 +14,37 @@ pub async fn search_page(
     let url_params =
         serde_url_params::to_string(&query).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    println!("{}", url_params);
+    let search_url = match search_type {
+        SearchType::Html => "/search",
+        SearchType::Image => "/image/search",
+        SearchType::Video => "/video/search",
+        SearchType::Audio => "/audio/search",
+    };
+
+    let search_params = serde_json::to_string(&SearchQueryList {
+        query: query.query.clone(),
+        start: 0,
+        length: 10,
+        extra: query.extra,
+    })
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let grab_list = html! {
+        div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
+    };
+
+    let surrounding_formating = match search_type {
+        SearchType::Html => {
+            html! {
+                div class = "flex flex-col" {
+                    (grab_list)
+                }
+            }
+        }
+        SearchType::Image => todo!(),
+        SearchType::Video => todo!(),
+        SearchType::Audio => todo!(),
+    };
 
     Ok(basic_page(html! {
         div class="min-h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {
@@ -85,7 +115,7 @@ pub async fn search_page(
             }
 
             div class="flex-1 mx-6 my-4 overflow-y-scroll w-full" {
-                (fetch_search_html(query, state).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+                (surrounding_formating)
             }
 
             footer class="bg-neutral-100 grid dark:bg-zinc-900 grid-cols-3 w-full px-4 py-2 gap-2" {
@@ -95,51 +125,90 @@ pub async fn search_page(
     }))
 }
 
-async fn fetch_search_html(query: SearchQuery, state: Arc<AppState>) -> Result<Markup, StatusCode> {
-    if query.extra.is_some() {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+pub async fn search_page_results(
+    search_type: SearchType,
+    query: SearchQueryList,
+    state: Arc<AppState>,
+) -> Result<Markup, (StatusCode, String)> {
+    // tokio::time::sleep(Duration::from_secs(2)).await; // use for loading spinner testing
+    match search_type {
+        SearchType::Html => {
+            search_page_results_html(query.query, query.start, query.length, state).await
+        }
+        SearchType::Image => todo!(),
+        SearchType::Video => todo!(),
+        SearchType::Audio => todo!(),
     }
+}
 
-    let results = state
+async fn search_page_results_html(
+    query: String,
+    start: u32,
+    length: u32,
+    state: Arc<AppState>,
+) -> Result<Markup, (StatusCode, String)> {
+    let results: Vec<SearchWebResult> = state
         .client
         .lock()
         .await
         .search_web(SearchWebRequest {
             query: Some(proto::search::SearchQuery {
-                query: query.query.clone(),
-                start: query.start,
-                length: query.length,
+                query: query.clone(),
+                start: start,
+                length: length,
             }),
         })
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
         .into_inner()
         .results;
 
+    let search_params = serde_json::to_string(&SearchQueryList {
+        query: query.clone(),
+        start,
+        length,
+        extra: None,
+    })
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+
     Ok(html! {
-        div class="flex flex-col" {
-            @for result in &results {
-                (render_web_results(result))
-            }
-            @if results.len() == query.length as usize {
-                div hx-post="/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals={"{\"query\": " (query.query) "\", start\": " (query.start + query.length) "}"} {}
-            }
+        @for result in &results {
+            (render_html_result(result))
+        }
+        @if results.len() == length as usize {
+            div hx-post="/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
         }
     })
 }
 
-fn render_web_results(result: &SearchWebResult) -> Markup {
+fn render_html_result(result: &SearchWebResult) -> Markup {
     html! {
-        div {
-            div {
-                span {
-                    (result.title())
+        div class="my-4 flex flex-col" {
+            a href=(result.url) {
+                div class="flex flex-row items-center" {
+                    @if let Some(icon_url) = &result.icon_url {
+                        img class="w-6 h-6" src=(icon_url) {}
+                    } @else {
+                        img class="w-6 h-6 dark:invert" src="/public/gloabe.svg" {}
+                    }
+                    div class="flex flex-col ml-4" {
+                        span class="font-semibold" {
+                            (result.title.as_deref().unwrap_or("Site Name Placeholder"))
+                        }
+                        span class="text-sm" {
+                            (&result.url)
+                        }
+                    }
                 }
-                span {
-                    (result.url)
+                h2 class="text-lg font-bold" {
+                    (result.title.as_deref().unwrap_or(&result.url))
                 }
             }
-
+            @if result.inner_text_match.is_some() || result.description.is_some() {
+                p class="w-1/2 sm:w-full" {
+                    (result.inner_text_match.as_deref().or(result.description.as_deref()).unwrap())
+                }
+            }
         }
     }
 }

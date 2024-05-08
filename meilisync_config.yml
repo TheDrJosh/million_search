@@ -9,7 +9,7 @@ source:
   database: million_search
 meilisearch:
   api_url: http://meilisearch:7700/
-  api_key: '4m-VT7nEPBGNEbM9nJWKRaeqB6o2tgmUwlbJjqPNx2E'
+  api_key: '-r_i6i4t88jTzlWtNIyVr0VybDBdn2it428fxr2Blcg'
   insert_size: 1000
   insert_interval: 10
 sync:
@@ -22,6 +22,7 @@ sync:
     url:
     title:
     description:
+    text_fields:
     sections:
 
 - table: image
@@ -49,7 +50,7 @@ sync:
     url:
 
 - table: search_history
-  index: audio
+  index: search_history
   pk: id
   full: true
   fields:
