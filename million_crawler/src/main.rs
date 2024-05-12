@@ -11,6 +11,7 @@ use proto::{
     },
     tonic::{transport::Channel, Code, Status},
 };
+use serde::Deserialize;
 use tracing::info;
 
 use crate::selector_set::SelectorSet;
@@ -64,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> {
-    let res = reqwest::get(job.url.clone()).await?;
+    let res = reqwest::get(&job.url).await?;
     let status = res.status();
 
     let headers = res.headers();
@@ -75,7 +76,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
         .flatten()
         .unwrap_or_default();
 
-    let ret = if mime_type.is_empty() || mime_type.contains("html") {
+    Ok(if mime_type.is_empty() || mime_type.contains("html") {
         let text = res.text().await?;
 
         let html = scraper::Html::parse_document(&text);
@@ -100,7 +101,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                 },
             )),
         }
-    } else if mime_type.contains("image") {
+    } else if mime_type.starts_with("image/") {
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
@@ -109,7 +110,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                 return_job_request::ok::Image { size: None },
             )),
         }
-    } else if mime_type.contains("video") {
+    } else if mime_type.starts_with("video/") {
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
@@ -121,13 +122,31 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                 },
             )),
         }
-    } else if mime_type.contains("audio") {
+    } else if mime_type.starts_with("audio/") {
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
             linked_urls: vec![],
             body: Some(return_job_request::ok::Body::Audio(
                 return_job_request::ok::Audio { length: None },
+            )),
+        }
+    } else if mime_type == "application/manifest+json" {
+        let text = res.text().await?;
+
+        let manifest: Manifest = serde_json::from_str(&text)?;
+
+        return_job_request::Ok {
+            status: status.as_u16() as i32,
+            mime_type,
+            linked_urls: vec![],
+            body: Some(return_job_request::ok::Body::Manifest(
+                return_job_request::ok::Manifest {
+                    categories: manifest.categories,
+                    description: manifest.description,
+                    name: manifest.name,
+                    short_name: manifest.short_name,
+                },
             )),
         }
     } else {
@@ -137,9 +156,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
             linked_urls: vec![],
             body: None,
         }
-    };
-
-    Ok(ret)
+    })
 }
 
 async fn get_job(client: &mut CrawlerClient<Channel>) -> Result<GetJobResponse, Status> {
@@ -165,4 +182,12 @@ async fn get_job(client: &mut CrawlerClient<Channel>) -> Result<GetJobResponse, 
     }
 
     return Err(Status::unavailable("cant get job from server"));
+}
+
+#[derive(Debug, Deserialize)]
+struct Manifest {
+    name: Option<String>,
+    short_name: Option<String>,
+    description: Option<String>,
+    categories: Vec<String>,
 }

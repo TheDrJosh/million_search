@@ -38,6 +38,7 @@ message ReturnJobRequest {
       Image image = 8;
       Video video = 9;
       Audio audio = 10;
+      Manifest manifest = 11;
     }
 
     message Html {
@@ -47,8 +48,6 @@ message ReturnJobRequest {
 
       repeated string text_fields = 4;
       repeated string sections = 5;
-
-      optional WebAppManifest manifest = 6;
     }
     message Image { optional Size size = 1; }
     message Video {
@@ -56,7 +55,7 @@ message ReturnJobRequest {
       google.protobuf.Duration length = 2;
     }
     message Audio { google.protobuf.Duration length = 1; }
-    message WebAppManifest {
+    message Manifest {
       repeated string categories = 1;
       optional string description = 2;
       optional string name = 3;
