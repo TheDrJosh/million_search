@@ -54,7 +54,7 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(CrawlerQueue::Url).string().not_null())
+                    .col(ColumnDef::new(CrawlerQueue::Url).string().not_null().unique_key())
                     .col(ColumnDef::new(CrawlerQueue::Status).string().not_null())
                     .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp())
                     .col(

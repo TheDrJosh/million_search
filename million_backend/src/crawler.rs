@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
-use entity::{audio, crawler_queue, image, video, websites};
+use entity::{audio, crawler_queue, image, manifest, video, websites};
 use meilisearch_sdk::Client;
 use proto::{
     crawler::{
@@ -228,7 +228,24 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     .map_err(|err| Status::from_error(err.into()))?;
             }
             Some(return_job_request::ok::Body::Manifest(manifest_body)) => {
-                
+                let url = request
+                    .url
+                    .parse::<Url>()
+                    .map_err(|err| Status::from_error(err.into()))?;
+
+                let manifest = manifest::ActiveModel {
+                    id: ActiveValue::NotSet,
+                    url_domain: ActiveValue::Set(url.domain().unwrap().to_owned()),
+                    name: ActiveValue::Set(manifest_body.name),
+                    short_name: ActiveValue::Set(manifest_body.short_name),
+                    description: ActiveValue::Set(manifest_body.description),
+                    categories: ActiveValue::Set(manifest_body.categories),
+                };
+
+                manifest
+                    .insert(&self.db)
+                    .await
+                    .map_err(|err| Status::from_error(err.into()))?;
             }
             None => {}
         }
