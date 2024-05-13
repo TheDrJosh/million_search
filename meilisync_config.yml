@@ -57,5 +57,17 @@ sync:
     id:
     text:
 
+- table: manifest
+  index: manifest
+  pk: id
+  full: true
+  fields:
+    id:
+    url_domain:
+    name:
+    short_name:
+    description:
+    categories:
+
 progress:
   type: file

@@ -53,6 +53,17 @@ async fn main() -> anyhow::Result<()> {
         .set_searchable_attributes(["text"])
         .await?;
 
+    search_client
+        .index("manifest")
+        .set_searchable_attributes([
+            "url_domain",
+            "name",
+            "short_name",
+            "description",
+            "categories",
+        ])
+        .await?;
+
     // Make grpc endpoint
 
     let addr = "0.0.0.0:8080".parse()?;
