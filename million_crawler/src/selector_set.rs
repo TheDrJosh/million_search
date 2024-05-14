@@ -28,6 +28,8 @@ pub struct SelectorSet {
 
     text_fields_selector: Selector,
     sections_selector: Selector,
+
+    link_manifest_selector: Selector,
 }
 
 impl SelectorSet {
@@ -62,7 +64,18 @@ impl SelectorSet {
 
             text_fields_selector: Selector::parse("p").unwrap(),
             sections_selector: Selector::parse("h1, h2, h3, h4, h5, h6").unwrap(),
+
+            link_manifest_selector: Selector::parse("link[rel=\"manifest\"][href]").unwrap(),
         }
+    }
+
+    pub fn select_manifest_url(&self, doc: &Html, page_url: &Url) -> Option<Url> {
+        doc.select(&self.link_manifest_selector)
+            .next()
+            .map(|icon_url| icon_url.attr("href"))
+            .flatten()
+            .map(|icon_url| Self::normalize_url(icon_url, page_url).ok())
+            .flatten()
     }
 
     pub fn select_title(&self, doc: &Html) -> Option<String> {

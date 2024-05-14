@@ -18,7 +18,24 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(SearchHistory::Text).string().not_null())
+                    .col(
+                        ColumnDef::new(SearchHistory::Text)
+                            .string()
+                            .unique_key()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(SearchHistory::Count)
+                            .integer()
+                            .not_null()
+                            .default(1),
+                    )
+                    .col(
+                        ColumnDef::new(SearchHistory::LastUpdatedAt)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(SearchHistory::CreatedAt)
                             .timestamp()
@@ -46,5 +63,7 @@ enum SearchHistory {
     Table,
     Id,
     Text,
+    Count,
+    LastUpdatedAt,
     CreatedAt,
 }

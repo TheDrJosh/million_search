@@ -85,6 +85,25 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
 
         let urls = SELECTOR.select_urls(&html, &job_url);
 
+        let manifest_url = SELECTOR.select_manifest_url(&html, &job_url);
+
+        let manifest = if let Some(manifest_url) = manifest_url {
+            let manifest_res = reqwest::get(manifest_url).await?.error_for_status()?;
+
+            let text = manifest_res.text().await?;
+
+            let manifest = serde_json::from_str::<Manifest>(&text)?;
+
+            Some(proto::crawler::return_job_request::ok::html::Manifest {
+                categories: manifest.categories,
+                description: manifest.description,
+                name: manifest.name,
+                short_name: manifest.short_name,
+            })
+        } else {
+            None
+        };
+
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
@@ -98,6 +117,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                         .map(|url| url.to_string()),
                     text_fields: SELECTOR.select_text_fields(&html),
                     sections: SELECTOR.select_sections(&html),
+                    manifest: manifest,
                 },
             )),
         }
@@ -129,24 +149,6 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
             linked_urls: vec![],
             body: Some(return_job_request::ok::Body::Audio(
                 return_job_request::ok::Audio { length: None },
-            )),
-        }
-    } else if mime_type == "application/manifest+json" {
-        let text = res.text().await?;
-
-        let manifest: Manifest = serde_json::from_str(&text)?;
-
-        return_job_request::Ok {
-            status: status.as_u16() as i32,
-            mime_type,
-            linked_urls: vec![],
-            body: Some(return_job_request::ok::Body::Manifest(
-                return_job_request::ok::Manifest {
-                    categories: manifest.categories,
-                    description: manifest.description,
-                    name: manifest.name,
-                    short_name: manifest.short_name,
-                },
             )),
         }
     } else {

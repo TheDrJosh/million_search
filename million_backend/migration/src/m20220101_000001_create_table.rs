@@ -32,6 +32,14 @@ impl MigrationTrait for Migration {
                             .array(ColumnType::String(None))
                             .not_null(),
                     )
+                    .col(ColumnDef::new(Websites::SiteName).string())
+                    .col(ColumnDef::new(Websites::SiteShortName).string())
+                    .col(ColumnDef::new(Websites::SiteDescription).string())
+                    .col(
+                        ColumnDef::new(Websites::SiteCategories)
+                            .array(ColumnType::String(None))
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(Websites::CreatedAt)
                             .timestamp()
@@ -54,7 +62,12 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(CrawlerQueue::Url).string().not_null().unique_key())
+                    .col(
+                        ColumnDef::new(CrawlerQueue::Url)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(ColumnDef::new(CrawlerQueue::Status).string().not_null())
                     .col(ColumnDef::new(CrawlerQueue::Expiry).timestamp())
                     .col(
@@ -100,6 +113,11 @@ enum Websites {
 
     TextFields,
     Sections,
+
+    SiteName,
+    SiteShortName,
+    SiteDescription,
+    SiteCategories,
 
     CreatedAt,
 }

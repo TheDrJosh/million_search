@@ -3,7 +3,6 @@
 pub use super::audio::Entity as Audio;
 pub use super::crawler_queue::Entity as CrawlerQueue;
 pub use super::image::Entity as Image;
-pub use super::manifest::Entity as Manifest;
 pub use super::search_history::Entity as SearchHistory;
 pub use super::video::Entity as Video;
 pub use super::websites::Entity as Websites;

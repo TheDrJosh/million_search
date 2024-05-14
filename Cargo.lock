@@ -2010,6 +2010,7 @@ dependencies = [
  "migration",
  "proto",
  "sea-orm",
+ "sea-query",
  "serde",
  "serde_json",
  "tokio",

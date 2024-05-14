@@ -1,6 +1,8 @@
+use chrono::Utc;
 use entity::{search_history, websites};
 use futures::future::join_all;
 use meilisearch_sdk::{Client, SearchResults};
+use migration::OnConflict;
 use proto::{
     search::{
         CompleteSearchRequest, CompleteSearchResponse, SearchAudioRequest, SearchAudioResponse,
@@ -9,7 +11,8 @@ use proto::{
     },
     tonic::{self, Response, Status},
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait};
+use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_query::Expr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -155,9 +158,24 @@ impl proto::search::search_server::Search for SearchServise {
 async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyhow::Result<()> {
     let search = search_history::ActiveModel {
         text: sea_orm::ActiveValue::Set(search),
+        last_updated_at: sea_orm::ActiveValue::Set(Utc::now().naive_utc()),
         ..Default::default()
     };
-    search.insert(db).await?;
+
+    search_history::Entity::insert(search)
+        .on_conflict(
+            OnConflict::column(search_history::Column::Text)
+                .update_column(search_history::Column::LastUpdatedAt)
+                .value(
+                    search_history::Column::Count,
+                    Expr::col((search_history::Entity, search_history::Column::Count))
+                        .add(Expr::val(1)),
+                )
+                .to_owned(),
+        )
+        .exec(db)
+        .await?;
+
     Ok(())
 }
 

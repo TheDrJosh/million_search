@@ -13,6 +13,10 @@ pub struct Model {
     pub icon_url: Option<String>,
     pub text_fields: Vec<String>,
     pub sections: Vec<String>,
+    pub site_name: Option<String>,
+    pub site_short_name: Option<String>,
+    pub site_description: Option<String>,
+    pub site_categories: Vec<String>,
     pub created_at: DateTime,
 }
 

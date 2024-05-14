@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
-use entity::{audio, crawler_queue, image, manifest, video, websites};
+use entity::{audio, crawler_queue, image, video, websites};
 use meilisearch_sdk::Client;
 use proto::{
     crawler::{
@@ -154,6 +154,35 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     text_fields: ActiveValue::Set(html_body.text_fields),
                     sections: ActiveValue::Set(html_body.sections),
 
+                    site_name: ActiveValue::Set(
+                        html_body
+                            .manifest
+                            .as_ref()
+                            .map(|manifest| manifest.name.clone())
+                            .flatten(),
+                    ),
+                    site_short_name: ActiveValue::Set(
+                        html_body
+                            .manifest
+                            .as_ref()
+                            .map(|manifest| manifest.short_name.clone())
+                            .flatten(),
+                    ),
+                    site_description: ActiveValue::Set(
+                        html_body
+                            .manifest
+                            .as_ref()
+                            .map(|manifest| manifest.description.clone())
+                            .flatten(),
+                    ),
+                    site_categories: ActiveValue::Set(
+                        html_body
+                            .manifest
+                            .as_ref()
+                            .map(|manifest| manifest.categories.clone())
+                            .unwrap_or_default(),
+                    ),
+
                     ..Default::default()
                 };
                 website
@@ -227,26 +256,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
             }
-            Some(return_job_request::ok::Body::Manifest(manifest_body)) => {
-                let url = request
-                    .url
-                    .parse::<Url>()
-                    .map_err(|err| Status::from_error(err.into()))?;
 
-                let manifest = manifest::ActiveModel {
-                    id: ActiveValue::NotSet,
-                    url_domain: ActiveValue::Set(url.domain().unwrap().to_owned()),
-                    name: ActiveValue::Set(manifest_body.name),
-                    short_name: ActiveValue::Set(manifest_body.short_name),
-                    description: ActiveValue::Set(manifest_body.description),
-                    categories: ActiveValue::Set(manifest_body.categories),
-                };
-
-                manifest
-                    .insert(&self.db)
-                    .await
-                    .map_err(|err| Status::from_error(err.into()))?;
-            }
             None => {}
         }
 
