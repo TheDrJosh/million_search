@@ -32,8 +32,6 @@ pub struct SelectorSet {
     link_manifest_selector: Selector,
 
     images_selector: Selector,
-    videos_selector: Selector,
-    audio_selector: Selector,
 }
 
 impl SelectorSet {
@@ -72,18 +70,28 @@ impl SelectorSet {
             link_manifest_selector: Selector::parse("link[rel=\"manifest\"][href]").unwrap(),
 
             images_selector: Selector::parse("img[src]").unwrap(),
-            videos_selector: Selector::parse("video").unwrap(),
-            audio_selector: Selector::parse("audio").unwrap(),
         }
     }
 
     pub fn select_manifest_url(&self, doc: &Html, page_url: &Url) -> Option<Url> {
         doc.select(&self.link_manifest_selector)
             .next()
-            .map(|icon_url| icon_url.attr("href"))
+            .map(|link_manifest| link_manifest.attr("href"))
             .flatten()
-            .map(|icon_url| Self::normalize_url(icon_url, page_url).ok())
+            .map(|link_manifest_url| Self::normalize_url(link_manifest_url, page_url).ok())
             .flatten()
+    }
+
+    pub fn select_images(&self, doc: &Html, page_url: &Url) -> Vec<(Url, Option<String>)> {
+        doc.select(&self.images_selector)
+            .map(|image| (image.attr("src").unwrap(), image.attr("alt")))
+            .filter_map(|(image_url, image_alt_text)| {
+                Some((
+                    Self::normalize_url(image_url, page_url).ok()?,
+                    image_alt_text.map(|iat| iat.to_owned()),
+                ))
+            })
+            .collect()
     }
 
     pub fn select_title(&self, doc: &Html) -> Option<String> {

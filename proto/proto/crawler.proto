@@ -1,7 +1,7 @@
 syntax = "proto3";
 package crawler;
 
-import "google/protobuf/duration.proto";
+// import "google/protobuf/duration.proto";
 
 service Crawler {
   rpc GetJob(GetJobRequest) returns (GetJobResponse);
@@ -45,8 +45,6 @@ message ReturnJobRequest {
       optional Manifest manifest = 7;
 
       repeated Image images = 8;
-      repeated Video videos = 9;
-      repeated Audio audio = 10;
 
       message Manifest {
         repeated string categories = 1;
@@ -58,20 +56,11 @@ message ReturnJobRequest {
         string image_url = 1;
         optional Size size = 2;
         optional string alt_text = 3;
-      }
-      message Video {
-        string video_url = 1;
-        Size size = 2;
-        google.protobuf.Duration length = 3;
-      }
-      message Audio {
-        string audio_url = 1;
-        google.protobuf.Duration length = 2;
-      }
 
-      message Size {
-        int32 width = 1;
-        int32 height = 2;
+        message Size {
+          int32 width = 1;
+          int32 height = 2;
+        }
       }
     }
   }

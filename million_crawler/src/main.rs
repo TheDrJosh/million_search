@@ -1,7 +1,8 @@
-use std::time::Duration;
+use std::{io::Cursor, time::Duration};
 
 use clap::Parser;
 use exponential_backoff::Backoff;
+use futures::future::join_all;
 use lazy_static::lazy_static;
 use proto::{
     crawler::{
@@ -94,7 +95,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
 
             let manifest = serde_json::from_str::<Manifest>(&text)?;
 
-            Some(proto::crawler::return_job_request::ok::body::Manifest {
+            Some(return_job_request::ok::body::Manifest {
                 categories: manifest.categories,
                 description: manifest.description,
                 name: manifest.name,
@@ -103,6 +104,32 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
         } else {
             None
         };
+
+        let images = join_all(SELECTOR.select_images(&html, &job_url).into_iter().map(
+            |(image_url, image_alt_text)| async move {
+                let img_res = reqwest::get(image_url.clone()).await?;
+                let img_bytes = img_res.bytes().await?;
+
+                let size = image::io::Reader::new(Cursor::new(img_bytes))
+                    .with_guessed_format()
+                    .ok()
+                    .map(|img| img.decode().ok())
+                    .flatten()
+                    .map(|img| return_job_request::ok::body::image::Size {
+                        width: img.width() as i32,
+                        height: img.height() as i32,
+                    });
+
+                anyhow::Result::Ok(return_job_request::ok::body::Image {
+                    image_url: image_url.to_string(),
+                    size,
+                    alt_text: image_alt_text,
+                })
+            },
+        ))
+        .await
+        .into_iter()
+        .collect::<anyhow::Result<Vec<_>>>()?;
 
         return_job_request::Ok {
             status: status.as_u16() as i32,
@@ -116,43 +143,10 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                     .map(|url| url.to_string()),
                 text_fields: SELECTOR.select_text_fields(&html),
                 sections: SELECTOR.select_sections(&html),
-                manifest: manifest,
+                manifest,
+                images,
             }),
         }
-
-        /*
-            else if mime_type.starts_with("image/") {
-            return_job_request::Ok {
-                status: status.as_u16() as i32,
-                mime_type,
-                linked_urls: vec![],
-                body: Some(return_job_request::ok::Body::Image(
-                    return_job_request::ok::Image { size: None },
-                )),
-            }
-        } else if mime_type.starts_with("video/") {
-            return_job_request::Ok {
-                status: status.as_u16() as i32,
-                mime_type,
-                linked_urls: vec![],
-                body: Some(return_job_request::ok::Body::Video(
-                    return_job_request::ok::Video {
-                        size: None,
-                        length: None,
-                    },
-                )),
-            }
-        } else if mime_type.starts_with("audio/") {
-            return_job_request::Ok {
-                status: status.as_u16() as i32,
-                mime_type,
-                linked_urls: vec![],
-                body: Some(return_job_request::ok::Body::Audio(
-                    return_job_request::ok::Audio { length: None },
-                )),
-            }
-        }
-             */
     } else {
         return_job_request::Ok {
             status: status.as_u16() as i32,
