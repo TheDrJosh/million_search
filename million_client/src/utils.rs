@@ -16,7 +16,7 @@ pub fn basic_page(body: Markup) -> Markup {
                     "Tree Search"
                 }
                 link rel="stylesheet" href="/public/main.css" {}
-                script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous" {}
+                script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous" defer {}
             }
             body {
                 (body)
@@ -33,7 +33,7 @@ pub fn search_bar(query: &str, search_type: SearchType) -> anyhow::Result<Markup
     Ok(html! {
         div class="flex flex-col h-16 group" {
             div class="flex flex-row items-center" {
-                object data="public/search.svg" type="image/svg+xml" class="h-4 filter dark:invert -mr-7 pl-3" {}
+                object data="/public/search.svg" type="image/svg+xml" class="h-4 filter dark:invert -mr-7 pl-3" {}
                 input class="resize-none min-w-0 pl-10 px-4 py-2 focus:outline-none border-black border rounded-xl group-focus-within:rounded-b-none
                     group-hover:bg-neutral-100 group-focus-within:bg-neutral-100 
                     dark:bg-zinc-800 dark:border-zinc-700
@@ -75,10 +75,8 @@ pub async fn search_suggestions(
     let search_url = match query.search_type {
         SearchType::Html => "/search",
         SearchType::Image => "/image/search",
-        SearchType::Video => "/video/search",
-        SearchType::Audio => "/audio/search",
     };
-
+    //TODO - Use proper serde query genneration
     Ok(html! {
         @for possibility in possibilities {
             a href=(search_url.to_owned() + "?query=" + &possibility) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {

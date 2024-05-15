@@ -21,8 +21,6 @@ pub async fn search_page(
     let search_url = match search_type {
         SearchType::Html => "/search",
         SearchType::Image => "/image/search",
-        SearchType::Video => "/video/search",
-        SearchType::Audio => "/audio/search",
     };
 
     let search_params = serde_json::to_string(&SearchQueryList {
@@ -39,14 +37,18 @@ pub async fn search_page(
     let surrounding_formating = match search_type {
         SearchType::Html => {
             html! {
-                div class = "flex flex-col" {
+                div class="flex flex-col" {
                     (grab_list)
                 }
             }
         }
-        SearchType::Image => todo!(),
-        SearchType::Video => todo!(),
-        SearchType::Audio => todo!(),
+        SearchType::Image => html! {
+            div class="flex flex-row" {
+                div class = "grid" {
+                    (grab_list)
+                }
+            }
+        },
     };
 
     Ok(basic_page(html! {
@@ -72,26 +74,7 @@ pub async fn search_page(
                                 }
                             }
                         }
-                        SearchType::Video => {
-                            a href="/video" class="flex flex-col items-center" {
-                                h1 class="font-bold tracking-tight text-3xl ml-6 mr-12 text-center" {
-                                    "Million Search"
-                                }
-                                span class="trackinng-tight text-lg text-center" {
-                                    "Videos"
-                                }
-                            }
-                        }
-                        SearchType::Audio => {
-                            a href="/audio" class="flex flex-col items-center" {
-                                h1 class="font-bold tracking-tight text-3xl ml-6 mr-12 text-center" {
-                                    "Million Search"
-                                }
-                                span class="trackinng-tight text-lg text-center" {
-                                    "Audio"
-                                }
-                            }
-                        }
+
                     }
 
                     form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
@@ -100,16 +83,10 @@ pub async fn search_page(
                 }
                 div class="flex flex-row gap-4 self-start pl-4 pt-2" {
                     a href=("/search?".to_owned() + &url_params) {
-                        "All"
+                        "Web"
                     }
                     a href=("/image/search?".to_owned() + &url_params) {
                         "Images"
-                    }
-                    a href=("/video/search?".to_owned() + &url_params) {
-                        "Videos"
-                    }
-                    a href=("/audio/search?".to_owned() + &url_params) {
-                        "Audio"
                     }
                 }
             }
@@ -135,8 +112,6 @@ pub async fn search_page_results(
     match search_type {
         SearchType::Html => search_page_results_html(query.query, query.page, state).await,
         SearchType::Image => todo!(),
-        SearchType::Video => todo!(),
-        SearchType::Audio => todo!(),
     }
 }
 

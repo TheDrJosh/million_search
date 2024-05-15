@@ -32,17 +32,7 @@ async fn main() -> anyhow::Result<()> {
 
     search_client
         .index("image")
-        .set_searchable_attributes(["url"])
-        .await?;
-
-    search_client
-        .index("video")
-        .set_searchable_attributes(["url"])
-        .await?;
-
-    search_client
-        .index("audio")
-        .set_searchable_attributes(["url"])
+        .set_searchable_attributes(["url", "alt_text"])
         .await?;
 
     search_client
@@ -63,17 +53,6 @@ async fn main() -> anyhow::Result<()> {
     search_client
         .index("search_history")
         .set_ranking_rules(ranking_rules)
-        .await?;
-
-    search_client
-        .index("manifest")
-        .set_searchable_attributes([
-            "url_domain",
-            "name",
-            "short_name",
-            "description",
-            "categories",
-        ])
         .await?;
 
     // Make grpc endpoint

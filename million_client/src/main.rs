@@ -1,7 +1,6 @@
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
-    time::Duration,
 };
 
 use axum::{
@@ -55,20 +54,10 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(home_search_html))
         .route("/image", get(home_search_image))
-        .route("/video", get(home_search_video))
-        .route("/audio", get(home_search_audio))
         .route("/search", get(search_html).post(search_html_results))
         .route(
             "/image/search",
             get(search_image).post(search_image_results),
-        )
-        .route(
-            "/video/search",
-            get(search_video).post(search_video_results),
-        )
-        .route(
-            "/audio/search",
-            get(search_audio).post(search_audio_results),
         )
         .route("/search-suggestions", post(search_suggestions))
         .nest_service("/public", ServeDir::new("public"))
@@ -91,8 +80,6 @@ async fn main() -> anyhow::Result<()> {
 enum SearchType {
     Html,
     Image,
-    Video,
-    Audio,
 }
 
 async fn home_search_html() -> Result<Markup, StatusCode> {
@@ -100,12 +87,6 @@ async fn home_search_html() -> Result<Markup, StatusCode> {
 }
 async fn home_search_image() -> Result<Markup, StatusCode> {
     home_search_page(SearchType::Image).await
-}
-async fn home_search_video() -> Result<Markup, StatusCode> {
-    home_search_page(SearchType::Video).await
-}
-async fn home_search_audio() -> Result<Markup, StatusCode> {
-    home_search_page(SearchType::Audio).await
 }
 
 #[derive(Deserialize, Serialize)]
@@ -116,8 +97,6 @@ struct SearchQuery {
 #[derive(Deserialize, Serialize)]
 enum ExtraSearchQuery {
     Image { size: Size },
-    Video { size: Size, length: Duration },
-    Audio { length: Duration },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -150,30 +129,7 @@ async fn search_image(
     match Option::<ExtraSearchQuery>::None {
         Some(ExtraSearchQuery::Image { size: _ }) | None => {
             search_page(SearchType::Image, query, state).await
-        }
-        Some(_) => Err(StatusCode::BAD_REQUEST),
-    }
-}
-async fn search_video(
-    State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQuery>,
-) -> Result<Markup, StatusCode> {
-    match Option::<ExtraSearchQuery>::None {
-        Some(ExtraSearchQuery::Video { size: _, length: _ }) | None => {
-            search_page(SearchType::Video, query, state).await
-        }
-        Some(_) => Err(StatusCode::BAD_REQUEST),
-    }
-}
-async fn search_audio(
-    State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQuery>,
-) -> Result<Markup, StatusCode> {
-    match Option::<ExtraSearchQuery>::None {
-        Some(ExtraSearchQuery::Audio { length: _ }) | None => {
-            search_page(SearchType::Audio, query, state).await
-        }
-        Some(_) => Err(StatusCode::BAD_REQUEST),
+        } // Some(_) => Err(StatusCode::BAD_REQUEST),
     }
 }
 
@@ -196,38 +152,9 @@ async fn search_image_results(
     match query.extra {
         Some(ExtraSearchQuery::Image { size: _ }) | None => {
             search_page_results(SearchType::Image, query, state).await
-        }
-        Some(_) => Err((
-            StatusCode::BAD_REQUEST,
-            String::from("incorrect query params for search type"),
-        )),
-    }
-}
-async fn search_video_results(
-    State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQueryList>,
-) -> Result<Markup, (StatusCode, String)> {
-    match query.extra {
-        Some(ExtraSearchQuery::Video { size: _, length: _ }) | None => {
-            search_page_results(SearchType::Video, query, state).await
-        }
-        Some(_) => Err((
-            StatusCode::BAD_REQUEST,
-            String::from("incorrect query params for search type"),
-        )),
-    }
-}
-async fn search_audio_results(
-    State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQueryList>,
-) -> Result<Markup, (StatusCode, String)> {
-    match query.extra {
-        Some(ExtraSearchQuery::Audio { length: _ }) | None => {
-            search_page_results(SearchType::Audio, query, state).await
-        }
-        Some(_) => Err((
-            StatusCode::BAD_REQUEST,
-            String::from("incorrect query params for search type"),
-        )),
+        } // Some(_) => Err((
+          //     StatusCode::BAD_REQUEST,
+          //     String::from("incorrect query params for search type"),
+          // )),
     }
 }

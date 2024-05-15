@@ -32,22 +32,8 @@ sync:
   fields:
     id:
     url:
+    alt_text:
 
-- table: video
-  index: video
-  pk: id
-  full: true
-  fields:
-    id:
-    url:
-
-- table: audio
-  index: audio
-  pk: id
-  full: true
-  fields:
-    id:
-    url:
 
 - table: search_history
   index: search_history
@@ -58,17 +44,6 @@ sync:
     text:
     count:
 
-- table: manifest
-  index: manifest
-  pk: id
-  full: true
-  fields:
-    id:
-    url_domain:
-    name:
-    short_name:
-    description:
-    categories:
 
 progress:
   type: file

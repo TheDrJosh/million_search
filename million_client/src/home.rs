@@ -10,15 +10,11 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
     let sub_text = match search_type {
         SearchType::Html => None,
         SearchType::Image => Some("Images"),
-        SearchType::Video => Some("Videos"),
-        SearchType::Audio => Some("Audio"),
     };
 
     let search_url = match search_type {
         SearchType::Html => "/search",
         SearchType::Image => "/image/search",
-        SearchType::Video => "/video/search",
-        SearchType::Audio => "/audio/search",
     };
 
     Ok(basic_page(html! {
@@ -26,18 +22,14 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
             div class="ml-2 flex flex-row gap-4 self-start" {
                 @if search_type != SearchType::Html {
                     a href="/" {
-                        "<"
+                        "Web"
+                    }
+                } @else {
+                    a href="/image" {
+                        "Images"
                     }
                 }
-                a href="/image" {
-                    "Images"
-                }
-                a href="video" {
-                    "Videos"
-                }
-                a href="audio" {
-                    "Audio"
-                }
+
             }
             div class="flex-1" {}
 
