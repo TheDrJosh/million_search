@@ -156,6 +156,10 @@ impl proto::search::search_server::Search for SearchServise {
 }
 
 async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyhow::Result<()> {
+    if search.is_empty() {
+        return Ok(());
+    }
+
     let search = search_history::ActiveModel {
         text: sea_orm::ActiveValue::Set(search),
         last_updated_at: sea_orm::ActiveValue::Set(Utc::now().naive_utc()),

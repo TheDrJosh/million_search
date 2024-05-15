@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 enum SearchType {
     Html,
     Image,

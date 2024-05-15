@@ -56,6 +56,7 @@ sync:
   fields:
     id:
     text:
+    count:
 
 - table: manifest
   index: manifest

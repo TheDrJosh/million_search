@@ -21,10 +21,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Connect to meilisearch
 
-    let search_client = Client::new(
-        "http://meilisearch:7700",
-        Some("-r_i6i4t88jTzlWtNIyVr0VybDBdn2it428fxr2Blcg"),
-    );
+    let search_client = Client::new("http://meilisearch:7700", Option::<String>::None);
 
     //TODO - Set Searchable feilds
 
@@ -51,6 +48,21 @@ async fn main() -> anyhow::Result<()> {
     search_client
         .index("search_history")
         .set_searchable_attributes(["text"])
+        .await?;
+
+    let ranking_rules = [
+        "words",
+        "typo",
+        "proximity",
+        "attribute",
+        "sort",
+        "exactness",
+        "count:desc",
+    ];
+
+    search_client
+        .index("search_history")
+        .set_ranking_rules(ranking_rules)
         .await?;
 
     search_client
