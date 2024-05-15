@@ -30,6 +30,10 @@ pub struct SelectorSet {
     sections_selector: Selector,
 
     link_manifest_selector: Selector,
+
+    images_selector: Selector,
+    videos_selector: Selector,
+    audio_selector: Selector,
 }
 
 impl SelectorSet {
@@ -66,6 +70,10 @@ impl SelectorSet {
             sections_selector: Selector::parse("h1, h2, h3, h4, h5, h6").unwrap(),
 
             link_manifest_selector: Selector::parse("link[rel=\"manifest\"][href]").unwrap(),
+
+            images_selector: Selector::parse("img[src]").unwrap(),
+            videos_selector: Selector::parse("video").unwrap(),
+            audio_selector: Selector::parse("audio").unwrap(),
         }
     }
 

@@ -53,7 +53,7 @@ pub async fn search_page(
     Ok(basic_page(html! {
         div class="min-h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {
 
-            header class="flex flex-col pt-6 pb-2 border-b-2 border-neutral-200 dark:border-zinc-700 w-full items-center" {
+            header class="flex flex-col pt-6 pb-2 border-b-2 border-neutral-200 dark:border-zinc-700 w-full items-center " {
                 div class="flex flex-row w-full items-center" {
                     @match search_type {
                         SearchType::Html => {

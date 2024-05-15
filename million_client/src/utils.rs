@@ -43,8 +43,8 @@ pub fn search_bar(query: &str, search_type: SearchType) -> anyhow::Result<Markup
             }
 
             div id="search-suggestions" class="flex flex-col border-black border pb-2 rounded-b-xl bg-neutral-100 invisible w-full z-50
-                dark:border-zinc-700 dark:bg-zinc-700
-                group-focus-within:visible" {}
+                group-focus-within:visible
+                dark:border-zinc-700 dark:bg-zinc-700" {}
         }
     })
 }
@@ -81,7 +81,7 @@ pub async fn search_suggestions(
 
     Ok(html! {
         @for possibility in possibilities {
-            a href=(search_url.to_owned() + "?" + &possibility) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {
+            a href=(search_url.to_owned() + "?query=" + &possibility) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {
                 (possibility)
             }
         }

@@ -94,7 +94,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
 
             let manifest = serde_json::from_str::<Manifest>(&text)?;
 
-            Some(proto::crawler::return_job_request::ok::html::Manifest {
+            Some(proto::crawler::return_job_request::ok::body::Manifest {
                 categories: manifest.categories,
                 description: manifest.description,
                 name: manifest.name,
@@ -107,55 +107,56 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
-            linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
-            body: Some(return_job_request::ok::Body::Html(
-                return_job_request::ok::Html {
-                    title: SELECTOR.select_title(&html),
-                    description: SELECTOR.select_description(&html),
-                    icon_url: SELECTOR
-                        .select_icon_url(&html, &job_url)
-                        .map(|url| url.to_string()),
-                    text_fields: SELECTOR.select_text_fields(&html),
-                    sections: SELECTOR.select_sections(&html),
-                    manifest: manifest,
-                },
-            )),
+            body: Some(return_job_request::ok::Body {
+                linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
+                title: SELECTOR.select_title(&html),
+                description: SELECTOR.select_description(&html),
+                icon_url: SELECTOR
+                    .select_icon_url(&html, &job_url)
+                    .map(|url| url.to_string()),
+                text_fields: SELECTOR.select_text_fields(&html),
+                sections: SELECTOR.select_sections(&html),
+                manifest: manifest,
+            }),
         }
-    } else if mime_type.starts_with("image/") {
-        return_job_request::Ok {
-            status: status.as_u16() as i32,
-            mime_type,
-            linked_urls: vec![],
-            body: Some(return_job_request::ok::Body::Image(
-                return_job_request::ok::Image { size: None },
-            )),
+
+        /*
+            else if mime_type.starts_with("image/") {
+            return_job_request::Ok {
+                status: status.as_u16() as i32,
+                mime_type,
+                linked_urls: vec![],
+                body: Some(return_job_request::ok::Body::Image(
+                    return_job_request::ok::Image { size: None },
+                )),
+            }
+        } else if mime_type.starts_with("video/") {
+            return_job_request::Ok {
+                status: status.as_u16() as i32,
+                mime_type,
+                linked_urls: vec![],
+                body: Some(return_job_request::ok::Body::Video(
+                    return_job_request::ok::Video {
+                        size: None,
+                        length: None,
+                    },
+                )),
+            }
+        } else if mime_type.starts_with("audio/") {
+            return_job_request::Ok {
+                status: status.as_u16() as i32,
+                mime_type,
+                linked_urls: vec![],
+                body: Some(return_job_request::ok::Body::Audio(
+                    return_job_request::ok::Audio { length: None },
+                )),
+            }
         }
-    } else if mime_type.starts_with("video/") {
-        return_job_request::Ok {
-            status: status.as_u16() as i32,
-            mime_type,
-            linked_urls: vec![],
-            body: Some(return_job_request::ok::Body::Video(
-                return_job_request::ok::Video {
-                    size: None,
-                    length: None,
-                },
-            )),
-        }
-    } else if mime_type.starts_with("audio/") {
-        return_job_request::Ok {
-            status: status.as_u16() as i32,
-            mime_type,
-            linked_urls: vec![],
-            body: Some(return_job_request::ok::Body::Audio(
-                return_job_request::ok::Audio { length: None },
-            )),
-        }
+             */
     } else {
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
-            linked_urls: vec![],
             body: None,
         }
     })
