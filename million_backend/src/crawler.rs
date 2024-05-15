@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
-use entity::{audio, crawler_queue, image, video, websites};
+use entity::{crawler_queue, websites};
 use meilisearch_sdk::Client;
 use proto::{
     crawler::{
@@ -144,7 +144,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         }
 
         match result.body {
-            Some(return_job_request::ok::Body::Html(html_body)) => {
+            Some(html_body) => {
                 let website = websites::ActiveModel {
                     url: ActiveValue::Set(request.url),
                     title: ActiveValue::Set(html_body.title),
@@ -189,72 +189,25 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                     .insert(&self.db)
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
-            }
-            Some(return_job_request::ok::Body::Image(image_body)) => {
-                let (width, height) = if let Some(size) = image_body.size {
-                    (Some(size.width), Some(size.height))
-                } else {
-                    (None, None)
-                };
-                let image = image::ActiveModel {
-                    url: ActiveValue::Set(request.url),
-                    width: ActiveValue::Set(width),
-                    height: ActiveValue::Set(height),
-                    ..Default::default()
-                };
-                image
-                    .insert(&self.db)
-                    .await
-                    .map_err(|err| Status::from_error(err.into()))?;
-            }
-            Some(return_job_request::ok::Body::Video(video_body)) => {
-                let (width, height) = if let Some(size) = video_body.size {
-                    (size.width, size.height)
-                } else {
-                    return Err(Status::invalid_argument("video size must exist"));
-                };
-                let video = video::ActiveModel {
-                    url: ActiveValue::Set(request.url),
-                    width: ActiveValue::Set(width),
-                    height: ActiveValue::Set(height),
-                    length_millis: ActiveValue::Set(
-                        video_body
-                            .length
-                            .ok_or(Status::invalid_argument("length must exist"))
-                            .map(|dir| {
-                                Duration::new(dir.seconds, dir.nanos as u32)
-                                    .ok_or(Status::invalid_argument("invalid length"))
-                                    .map(|dir| dir.num_milliseconds())
-                            })?? as i32,
-                    ),
 
-                    ..Default::default()
-                };
-                video
-                    .insert(&self.db)
-                    .await
-                    .map_err(|err| Status::from_error(err.into()))?;
-            }
-            Some(return_job_request::ok::Body::Audio(audio_body)) => {
-                let audio = audio::ActiveModel {
-                    url: ActiveValue::Set(request.url),
-                    length_millis: ActiveValue::Set(
-                        audio_body
-                            .length
-                            .ok_or(Status::invalid_argument("length must exist"))
-                            .map(|dir| {
-                                Duration::new(dir.seconds, dir.nanos as u32)
-                                    .ok_or(Status::invalid_argument("invalid length"))
-                                    .map(|dir| dir.num_milliseconds())
-                            })?? as i32,
-                    ),
-
-                    ..Default::default()
-                };
-                audio
-                    .insert(&self.db)
-                    .await
-                    .map_err(|err| Status::from_error(err.into()))?;
+                for img in html_body.images {
+                    let (width, height) = if let Some(size) = img.size {
+                        (Some(size.width), Some(size.height))
+                    } else {
+                        (None, None)
+                    };
+                    let image = entity::image::ActiveModel {
+                        url: ActiveValue::Set(img.image_url),
+                        width: ActiveValue::Set(width),
+                        height: ActiveValue::Set(height),
+                        // alt_text: ActiveValue::Set(img.alt_text),
+                        ..Default::default()
+                    };
+                    image
+                        .insert(&self.db)
+                        .await
+                        .map_err(|err| Status::from_error(err.into()))?;
+                }
             }
 
             None => {}

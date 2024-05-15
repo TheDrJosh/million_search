@@ -27,8 +27,7 @@ pub async fn search_page(
 
     let search_params = serde_json::to_string(&SearchQueryList {
         query: query.query.clone(),
-        start: 0,
-        length: 10,
+        page: 0,
         extra: query.extra,
     })
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -134,9 +133,7 @@ pub async fn search_page_results(
 ) -> Result<Markup, (StatusCode, String)> {
     // tokio::time::sleep(Duration::from_secs(2)).await; // use for loading spinner testing
     match search_type {
-        SearchType::Html => {
-            search_page_results_html(query.query, query.start, query.length, state).await
-        }
+        SearchType::Html => search_page_results_html(query.query, query.page, state).await,
         SearchType::Image => todo!(),
         SearchType::Video => todo!(),
         SearchType::Audio => todo!(),
@@ -145,8 +142,7 @@ pub async fn search_page_results(
 
 async fn search_page_results_html(
     query: String,
-    start: u32,
-    length: u32,
+    page: u32,
     state: Arc<AppState>,
 ) -> Result<Markup, (StatusCode, String)> {
     let results: Vec<SearchWebResult> = state
@@ -156,8 +152,7 @@ async fn search_page_results_html(
         .search_web(SearchWebRequest {
             query: Some(proto::search::SearchQuery {
                 query: query.clone(),
-                start: start,
-                length: length,
+                page,
             }),
         })
         .await
@@ -167,8 +162,7 @@ async fn search_page_results_html(
 
     let search_params = serde_json::to_string(&SearchQueryList {
         query: query.clone(),
-        start: start + length,
-        length,
+        page,
         extra: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
@@ -177,7 +171,7 @@ async fn search_page_results_html(
         @for result in &results {
             (render_html_result(result))
         }
-        @if results.len() == length as usize {
+        @if results.len() != 0 as usize {
             div hx-post="/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
         }
     })

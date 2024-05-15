@@ -5,8 +5,8 @@ use meilisearch_sdk::{Client, SearchResults};
 use migration::OnConflict;
 use proto::{
     search::{
-        CompleteSearchRequest, CompleteSearchResponse, SearchAudioRequest, SearchAudioResponse,
-        SearchImageRequest, SearchImageResponse, SearchVideoRequest, SearchVideoResponse,
+        CompleteSearchRequest, CompleteSearchResponse,
+        SearchImageRequest, SearchImageResponse,
         SearchWebRequest, SearchWebResponse, SearchWebResult,
     },
     tonic::{self, Response, Status},
@@ -78,6 +78,7 @@ impl proto::search::search_server::Search for SearchServise {
             .index("websites")
             .search()
             .with_query(&query.query)
+            .with_page(query.page as usize)
             .execute()
             .await
             .map_err(|err| Status::from_error(err.into()))?;
@@ -86,8 +87,6 @@ impl proto::search::search_server::Search for SearchServise {
             result
                 .hits
                 .iter()
-                .skip(query.start as usize)
-                .take(query.length as usize)
                 .map(|web| websites::Entity::find_by_id(web.result.id as i32).one(&self.db)),
         )
         .await
@@ -114,35 +113,6 @@ impl proto::search::search_server::Search for SearchServise {
         &self,
         request: tonic::Request<SearchImageRequest>,
     ) -> std::result::Result<tonic::Response<SearchImageResponse>, tonic::Status> {
-        let request = request.into_inner();
-        let query = request
-            .query
-            .ok_or(Status::invalid_argument("must have query"))?;
-
-        save_search_to_history(&self.db, query.query)
-            .await
-            .map_err(|err| Status::from_error(err.into()))?;
-        todo!()
-    }
-
-    async fn search_video(
-        &self,
-        request: tonic::Request<SearchVideoRequest>,
-    ) -> std::result::Result<tonic::Response<SearchVideoResponse>, tonic::Status> {
-        let request = request.into_inner();
-        let query = request
-            .query
-            .ok_or(Status::invalid_argument("must have query"))?;
-
-        save_search_to_history(&self.db, query.query)
-            .await
-            .map_err(|err| Status::from_error(err.into()))?;
-        todo!()
-    }
-    async fn search_audio(
-        &self,
-        request: tonic::Request<SearchAudioRequest>,
-    ) -> std::result::Result<tonic::Response<SearchAudioResponse>, tonic::Status> {
         let request = request.into_inner();
         let query = request
             .query
@@ -187,26 +157,10 @@ async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyh
 struct Websites {
     id: i64,
     url: String,
-    // title: Option<String>,
-    // description: Option<String>,
-    // text_fields: Vec<String>,
-    // sections: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Image {
-    id: i64,
-    url: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Video {
-    id: i64,
-    url: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Audio {
     id: i64,
     url: String,
 }

@@ -134,8 +134,9 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
         return_job_request::Ok {
             status: status.as_u16() as i32,
             mime_type,
+            linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
+
             body: Some(return_job_request::ok::Body {
-                linked_urls: urls.into_iter().map(|url| url.to_string()).collect(),
                 title: SELECTOR.select_title(&html),
                 description: SELECTOR.select_description(&html),
                 icon_url: SELECTOR
@@ -152,6 +153,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
             status: status.as_u16() as i32,
             mime_type,
             body: None,
+            linked_urls: vec![],
         }
     })
 }

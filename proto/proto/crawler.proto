@@ -31,20 +31,20 @@ message ReturnJobRequest {
 
     string MIME_type = 2;
 
-    Body body = 3;
+    repeated string linked_urls = 3;
+
+    Body body = 4;
 
     message Body {
-      repeated string linked_urls = 1;
+      optional string title = 1;
+      optional string description = 2;
+      optional string icon_url = 3;
 
-      optional string title = 2;
-      optional string description = 3;
-      optional string icon_url = 4;
+      repeated string text_fields = 4;
+      repeated string sections = 5;
+      optional Manifest manifest = 6;
 
-      repeated string text_fields = 5;
-      repeated string sections = 6;
-      optional Manifest manifest = 7;
-
-      repeated Image images = 8;
+      repeated Image images = 7;
 
       message Manifest {
         repeated string categories = 1;

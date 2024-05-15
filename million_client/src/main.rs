@@ -123,8 +123,7 @@ enum ExtraSearchQuery {
 #[derive(Deserialize, Serialize)]
 struct SearchQueryList {
     query: String,
-    start: u32,
-    length: u32,
+    page: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     extra: Option<ExtraSearchQuery>,
 }
