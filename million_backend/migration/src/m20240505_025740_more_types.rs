@@ -19,6 +19,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Image::Url).string().not_null())
+                    .col(ColumnDef::new(Image::SourceUrl).string().not_null())
                     .col(ColumnDef::new(Image::Width).integer())
                     .col(ColumnDef::new(Image::Height).integer())
                     .col(ColumnDef::new(Image::AltText).string())
@@ -52,5 +53,6 @@ enum Image {
     Width,
     Height,
     AltText,
+    SourceUrl,
     CreatedAt,
 }

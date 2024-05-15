@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
 
     search_client
         .index("image")
-        .set_searchable_attributes(["url", "alt_text"])
+        .set_searchable_attributes(["url", "alt_text", "source_url"])
         .await?;
 
     search_client

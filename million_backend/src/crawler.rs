@@ -146,7 +146,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         match result.body {
             Some(html_body) => {
                 let website = websites::ActiveModel {
-                    url: ActiveValue::Set(request.url),
+                    url: ActiveValue::Set(request.url.clone()),
                     title: ActiveValue::Set(html_body.title),
                     description: ActiveValue::Set(html_body.description),
                     icon_url: ActiveValue::Set(html_body.icon_url),
@@ -200,7 +200,8 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                         url: ActiveValue::Set(img.image_url),
                         width: ActiveValue::Set(width),
                         height: ActiveValue::Set(height),
-                        // alt_text: ActiveValue::Set(img.alt_text),
+                        alt_text: ActiveValue::Set(img.alt_text),
+                        source_url: ActiveValue::Set(request.url.clone()),
                         ..Default::default()
                     };
                     image

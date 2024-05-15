@@ -33,6 +33,7 @@ sync:
     id:
     url:
     alt_text:
+    source_url:
 
 
 - table: search_history
