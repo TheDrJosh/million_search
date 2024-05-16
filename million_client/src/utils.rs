@@ -13,14 +13,14 @@ pub fn basic_page(body: Markup) -> Markup {
         html {
             head {
                 title {
-                    "Tree Search"
+                    "Million Search"
                 }
                 meta charset="UTF-8" {}
                 meta name="viewport" content="width=device-width, initial-scale=1.0" {}
 
                 link rel="stylesheet" href="/public/main.css" {}
                 script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous" defer {}
-                // script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/json-enc.js" defer {}
+                script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/json-enc.js" defer {}
             }
             body class="dark:bg-zinc-800 dark:text-zinc-50" {
                 (body)

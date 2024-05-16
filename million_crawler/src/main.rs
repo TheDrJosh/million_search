@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     tokio::select! {
-        _ = run_many(args, 30) => {}
+        _ = run_many(args, 1) => {}
         _ = tokio::time::sleep(Duration::from_secs(60 * 30)) => {}
     }
 

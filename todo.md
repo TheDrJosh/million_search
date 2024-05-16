@@ -9,3 +9,6 @@
 - [ ] search complete
 - [ ] keep error logs
 - [ ] use robot.txt
+- [ ] logging
+- [ ] auth
+- [ ] no js mode

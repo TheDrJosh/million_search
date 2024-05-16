@@ -44,6 +44,9 @@ services:
       - 'search_data:/meili_data'
     ports:
       - '7700:7700'
+    # depends_on:
+    #   - meilisync
+
   meilisync:
     image: long2ice/meilisync:sha-052c4de
     volumes:

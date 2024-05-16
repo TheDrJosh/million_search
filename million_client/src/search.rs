@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, Form};
+use axum::{extract::State, http::StatusCode, Form, Json};
 use maud::{html, Markup};
 
 use proto::search::{SearchImageRequest, SearchImageResult, SearchWebRequest, SearchWebResult};
@@ -238,13 +238,13 @@ fn render_image_result(
         query: query.to_owned(),
         size_range,
         page,
-        item: i,
+        item: i as i32,
     })?;
 
     Ok(html! {
         div class="flex flex-col m-4 w-fit max-w-48" {
             img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md" alt=(result.alt_text())
-                hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) {}
+                hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) hx-ext="json-enc" {}
 
             a href=(result.source_url) class="min-w-0 flex flex-col" {
                 div class="flex flex-row items-center min-w-0" {
@@ -267,10 +267,10 @@ pub struct ViewData {
     query: String,
     size_range: Option<SizeRange>,
     page: u32,
-    item: u32,
+    item: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SizeRange {
     pub min_width: u32,
     pub min_height: u32,
@@ -280,10 +280,10 @@ pub struct SizeRange {
 
 pub async fn image_view(
     State(state): State<Arc<AppState>>,
-    view_state: Option<Form<ViewData>>,
+    view_state: Option<Json<ViewData>>,
 ) -> Result<Markup, (StatusCode, String)> {
     Ok(match view_state {
-        Some(Form(view_data)) => {
+        Some(Json(view_data)) => {
             //get data
 
             let img_list = state
@@ -292,30 +292,74 @@ pub async fn image_view(
                 .await
                 .search_image(SearchImageRequest {
                     query: Some(proto::search::SearchQuery {
-                        query: view_data.query,
-                        page: view_data.page,
+                        query: view_data.query.clone(),
+                        page: view_data.page.clone() + 1,
                     }),
-                    size: view_data.size_range.map(|range| proto::search::SizeRange {
-                        min_width: range.min_width,
-                        min_height: range.min_height,
-                        max_width: range.max_width,
-                        max_height: range.max_height,
-                    }),
+                    size: view_data
+                        .size_range
+                        .as_ref()
+                        .map(|range| proto::search::SizeRange {
+                            min_width: range.min_width,
+                            min_height: range.min_height,
+                            max_width: range.max_width,
+                            max_height: range.max_height,
+                        }),
                 })
                 .await
                 .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
                 .into_inner()
                 .results;
-            let img = img_list.get(view_data.item as usize).ok_or((
+
+            let item = if view_data.item < 0 {
+                img_list.len() as i32 + view_data.item - 1
+            } else {
+                view_data.item
+            };
+
+            println!("Item: {}", item);
+
+            let img = img_list.get(item as usize).ok_or((
                 StatusCode::BAD_REQUEST,
-                "item outside of page range".to_owned(),
+                format!(
+                    "item ({}) outside of page range, max: {}",
+                    item,
+                    img_list.len()
+                ),
             ))?;
+
+            let next_view = serde_json::to_string(&ViewData {
+                query: view_data.query.clone(),
+                size_range: view_data.size_range.clone(),
+                page: view_data.page
+                    + if item + 1 >= img_list.len() as i32 {
+                        1
+                    } else {
+                        0
+                    },
+                item: if item + 1 >= img_list.len() as i32 {
+                    0
+                } else {
+                    item + 1
+                },
+            })
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+            let prev_view = serde_json::to_string(&ViewData {
+                query: view_data.query,
+                size_range: view_data.size_range,
+                page: view_data.page - if item - 1 < 0 { 1 } else { 0 },
+                item: if item - 1 < 0 { -1 } else { item - 1 },
+            })
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
             html! {
                 div id="image-view" class="flex flex-col border-l transition-all flex-1" {
-                    button class="self-end" hx- post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
+                    div class="self-end" {
+                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) hx-ext="json-enc" {"<"}
+                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) hx-ext="json-enc" {">"}
+                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
+                    }
 
-                    img src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
+                    img  class="self-center" src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
 
 
                 }
