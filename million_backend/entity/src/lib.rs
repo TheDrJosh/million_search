@@ -4,5 +4,6 @@ pub mod prelude;
 
 pub mod crawler_queue;
 pub mod image;
+pub mod sea_orm_active_enums;
 pub mod search_history;
 pub mod websites;

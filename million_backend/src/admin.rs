@@ -9,6 +9,7 @@ use proto::{
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
 };
+use entity::sea_orm_active_enums::Status as JobStatus;
 
 #[derive(Debug)]
 pub struct AdminServise {
@@ -25,7 +26,7 @@ impl proto::admin::admin_server::Admin for AdminServise {
 
         let add_to_queue = crawler_queue::ActiveModel {
             url: ActiveValue::Set(request.url),
-            status: ActiveValue::Set(String::from("queued")),
+            status: ActiveValue::Set(JobStatus::Queued),
 
             ..Default::default()
         };
@@ -43,7 +44,7 @@ impl proto::admin::admin_server::Admin for AdminServise {
         _request: tonic::Request<GetAllUrlsInQueueRequest>,
     ) -> Result<tonic::Response<GetAllUrlsInQueueResponse>, tonic::Status> {
         let urls = crawler_queue::Entity::find()
-            .filter(crawler_queue::Column::Status.ne("complete"))
+            .filter(crawler_queue::Column::Status.ne(JobStatus::Complete))
             .all(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?

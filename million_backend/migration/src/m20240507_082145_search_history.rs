@@ -67,3 +67,4 @@ enum SearchHistory {
     LastUpdatedAt,
     CreatedAt,
 }
+

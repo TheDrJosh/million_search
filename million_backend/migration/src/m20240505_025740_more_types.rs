@@ -1,5 +1,7 @@
 use sea_orm_migration::prelude::*;
 
+use crate::m20220101_000001_create_table::Websites;
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -19,7 +21,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Image::Url).string().not_null())
-                    .col(ColumnDef::new(Image::SourceUrl).string().not_null())
+                    .col(ColumnDef::new(Image::Source).integer().not_null())
                     .col(ColumnDef::new(Image::Width).integer())
                     .col(ColumnDef::new(Image::Height).integer())
                     .col(ColumnDef::new(Image::AltText).string())
@@ -29,6 +31,15 @@ impl MigrationTrait for Migration {
                             .default(Expr::current_timestamp())
                             .not_null(),
                     )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_foreign_key(
+                ForeignKey::create()
+                    .from(Image::Table, Image::Source)
+                    .to(Websites::Table, Websites::Id)
                     .to_owned(),
             )
             .await?;
@@ -53,6 +64,6 @@ enum Image {
     Width,
     Height,
     AltText,
-    SourceUrl,
+    Source,
     CreatedAt,
 }

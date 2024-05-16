@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDateTime, Utc};
+use entity::sea_orm_active_enums::Status as JobStatus;
 use entity::{crawler_queue, websites};
 use meilisearch_sdk::Client;
 use proto::{
@@ -15,6 +16,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, EntityTrait,
     QueryFilter,
 };
+use sea_query::{IntoIden, SimpleExpr};
 use url::Url;
 
 #[derive(Debug)]
@@ -34,10 +36,10 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         let task = crawler_queue::Entity::find()
             .filter(
                 Condition::any()
-                    .add(crawler_queue::Column::Status.eq("queued"))
+                    .add(crawler_queue::Column::Status.eq(JobStatus::Queued))
                     .add(
                         Condition::all()
-                            .add(crawler_queue::Column::Status.eq("executing"))
+                            .add(crawler_queue::Column::Status.eq(JobStatus::Executing))
                             .add(crawler_queue::Column::Expiry.lte(chrono::Utc::now().naive_utc())),
                     ),
             )
@@ -47,7 +49,13 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .ok_or(Status::resource_exhausted("No more Jobs in queue"))?;
 
         crawler_queue::Entity::update_many()
-            .col_expr(crawler_queue::Column::Status, "executing".into())
+            .col_expr(
+                crawler_queue::Column::Status,
+                SimpleExpr::AsEnum(
+                    entity::sea_orm_active_enums::StatusEnum.into_iden(),
+                    Box::new(JobStatus::Executing.into()),
+                ),
+            )
             .col_expr(
                 crawler_queue::Column::LastUpdated,
                 chrono::Utc::now().naive_utc().into(),
@@ -90,7 +98,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             .map_err(|err| Status::from_error(err.into()))?
             .ok_or(Status::invalid_argument("task not found"))?;
 
-        if task.status != "executing" {
+        if task.status != JobStatus::Executing {
             return Err(Status::invalid_argument("not an active task"));
         }
 
@@ -99,7 +107,10 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         }
 
         crawler_queue::Entity::update_many()
-            .col_expr(crawler_queue::Column::Status, "complete".into())
+            .col_expr(crawler_queue::Column::Status, SimpleExpr::AsEnum(
+                entity::sea_orm_active_enums::StatusEnum.into_iden(),
+                Box::new(JobStatus::Complete.into()),
+            ))
             .col_expr(
                 crawler_queue::Column::Expiry,
                 Option::<NaiveDateTime>::None.into(),
@@ -134,7 +145,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
             let website = crawler_queue::ActiveModel {
                 url: ActiveValue::Set(url.to_string()),
-                status: ActiveValue::Set(String::from("queued")),
+                status: ActiveValue::Set(JobStatus::Queued),
                 ..Default::default()
             };
             website
@@ -185,12 +196,13 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
                     ..Default::default()
                 };
-                website
+                let website = website
                     .insert(&self.db)
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
 
                 for img in html_body.images {
+                    //TODO - Remove duplicates
                     let (width, height) = if let Some(size) = img.size {
                         (Some(size.width), Some(size.height))
                     } else {
@@ -201,7 +213,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                         width: ActiveValue::Set(width),
                         height: ActiveValue::Set(height),
                         alt_text: ActiveValue::Set(img.alt_text),
-                        source_url: ActiveValue::Set(request.url.clone()),
+                        source: ActiveValue::Set(website.id),
                         ..Default::default()
                     };
                     image

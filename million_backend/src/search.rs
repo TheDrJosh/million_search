@@ -5,9 +5,9 @@ use meilisearch_sdk::{Client, SearchResults};
 use migration::OnConflict;
 use proto::{
     search::{
-        CompleteSearchRequest, CompleteSearchResponse,
-        SearchImageRequest, SearchImageResponse,
-        SearchWebRequest, SearchWebResponse, SearchWebResult,
+        search_image_result::Size, CompleteSearchRequest, CompleteSearchResponse,
+        SearchImageRequest, SearchImageResponse, SearchImageResult, SearchWebRequest,
+        SearchWebResponse, SearchWebResult,
     },
     tonic::{self, Response, Status},
 };
@@ -69,7 +69,7 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.db, query.query.clone())
+        save_search_to_history(&self.db, &query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
 
@@ -103,6 +103,8 @@ impl proto::search::search_server::Search for SearchServise {
                 description: model.description,
                 icon_url: model.icon_url,
                 inner_text_match: None,
+                site_name: model.site_name,
+                site_description: model.site_description,
             })
             .collect::<Vec<_>>();
 
@@ -118,20 +120,63 @@ impl proto::search::search_server::Search for SearchServise {
             .query
             .ok_or(Status::invalid_argument("must have query"))?;
 
-        save_search_to_history(&self.db, query.query)
+        save_search_to_history(&self.db, &query.query)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
-        todo!()
+
+        let result: SearchResults<Image> = self
+            .search_client
+            .index("image")
+            .search()
+            .with_query(&query.query)
+            .with_page(query.page as usize)
+            .execute()
+            .await
+            .map_err(|err| Status::from_error(err.into()))?;
+
+        let list = join_all(result.hits.iter().map(|web| {
+            entity::image::Entity::find_by_id(web.result.id as i32)
+                .find_also_related(websites::Entity)
+                .one(&self.db)
+        }))
+        .await
+        .into_iter()
+        .collect::<Result<Option<Vec<_>>, _>>()
+        .map_err(|err| Status::from_error(err.into()))?
+        .ok_or(Status::internal("desync between postgres and meiliseach"))?;
+
+        let results = list
+            .into_iter()
+            .map(|(image_model, website_model)| {
+                let website_model = website_model.unwrap();
+                SearchImageResult {
+                    url: image_model.url,
+                    alt_text: image_model.alt_text,
+                    size: image_model
+                        .width
+                        .zip(image_model.height)
+                        .map(|(width, height)| Size {
+                            width: width as u32,
+                            height: height as u32,
+                        }),
+                    source_url: website_model.url.clone(),
+                    source_icon_url: website_model.icon_url.clone(),
+                    source_title: display_site_name(&website_model),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Response::new(SearchImageResponse { results }))
     }
 }
 
-async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyhow::Result<()> {
+async fn save_search_to_history(db: &DatabaseConnection, search: &str) -> anyhow::Result<()> {
     if search.is_empty() {
         return Ok(());
     }
 
     let search = search_history::ActiveModel {
-        text: sea_orm::ActiveValue::Set(search),
+        text: sea_orm::ActiveValue::Set(search.to_owned()),
         last_updated_at: sea_orm::ActiveValue::Set(Utc::now().naive_utc()),
         ..Default::default()
     };
@@ -151,6 +196,17 @@ async fn save_search_to_history(db: &DatabaseConnection, search: String) -> anyh
         .await?;
 
     Ok(())
+}
+
+//TODO - Make This Frontend
+fn display_site_name(website: &websites::Model) -> String {
+    website
+        .site_name
+        .as_deref()
+        .or(website.site_short_name.as_deref())
+        .or(website.title.as_deref())
+        .unwrap_or(website.url.as_str())
+        .to_owned()
 }
 
 #[derive(Serialize, Deserialize)]

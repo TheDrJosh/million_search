@@ -27,7 +27,17 @@ async fn main() -> anyhow::Result<()> {
 
     search_client
         .index("websites")
-        .set_searchable_attributes(["url", "title", "description", "sections", "text_fields"])
+        .set_searchable_attributes([
+            "url",
+            "title",
+            "description",
+            "sections",
+            "text_fields",
+            "site_name",
+            "site_short_name",
+            "site_description",
+            "site_categories",
+        ])
         .await?;
 
     search_client

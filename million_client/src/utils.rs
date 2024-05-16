@@ -15,10 +15,13 @@ pub fn basic_page(body: Markup) -> Markup {
                 title {
                     "Tree Search"
                 }
+                meta charset="UTF-8" {}
+                meta name="viewport" content="width=device-width, initial-scale=1.0" {}
+
                 link rel="stylesheet" href="/public/main.css" {}
                 script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous" defer {}
             }
-            body {
+            body class="dark:bg-zinc-800 dark:text-zinc-50" {
                 (body)
             }
         }
