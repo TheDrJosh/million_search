@@ -107,10 +107,13 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         }
 
         crawler_queue::Entity::update_many()
-            .col_expr(crawler_queue::Column::Status, SimpleExpr::AsEnum(
-                entity::sea_orm_active_enums::StatusEnum.into_iden(),
-                Box::new(JobStatus::Complete.into()),
-            ))
+            .col_expr(
+                crawler_queue::Column::Status,
+                SimpleExpr::AsEnum(
+                    entity::sea_orm_active_enums::StatusEnum.into_iden(),
+                    Box::new(JobStatus::Complete.into()),
+                ),
+            )
             .col_expr(
                 crawler_queue::Column::Expiry,
                 Option::<NaiveDateTime>::None.into(),

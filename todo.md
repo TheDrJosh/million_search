@@ -7,3 +7,5 @@
 - [x] read manifest.json
 - [ ] read meta keywords
 - [ ] search complete
+- [ ] keep error logs
+- [ ] use robot.txt

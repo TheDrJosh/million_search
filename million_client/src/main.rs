@@ -13,7 +13,7 @@ use clap::Parser;
 use home::home_search_page;
 use maud::Markup;
 use proto::search::search_client::SearchClient;
-use search::{search_page, search_page_results};
+use search::{image_view, search_page, search_page_results};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
@@ -59,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
             "/image/search",
             get(search_image).post(search_image_results),
         )
+        .route("/image/search/view", post(image_view))
         .route("/search-suggestions", post(search_suggestions))
         .nest_service("/public", ServeDir::new("public"))
         .with_state(state);
@@ -107,7 +108,7 @@ struct SearchQueryList {
     extra: Option<ExtraSearchQuery>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Size {
     width: u32,
     height: u32,

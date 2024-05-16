@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use axum::http::StatusCode;
+use axum::{extract::State, http::StatusCode, Form};
 use maud::{html, Markup};
 
 use proto::search::{SearchImageRequest, SearchImageResult, SearchWebRequest, SearchWebResult};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     utils::{basic_page, search_bar},
@@ -44,12 +45,10 @@ pub async fn search_page(
         }
         SearchType::Image => html! {
             div class="flex flex-row" {
-                div class="flex flex-row flex-wrap items-center flex-[2]" {
+                div class="flex flex-row flex-wrap items-center flex-[2] overflow-y-scroll" {
                     (grab_list)
                 }
-                div id="image-view" class="flex-1" {
-
-                }
+                div id="image-view" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {}
             }
         },
     };
@@ -219,8 +218,8 @@ async fn search_page_results_image(
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     Ok(html! {
-        @for result in &results {
-            (render_image_result(result))
+        @for (i, result) in results.iter().enumerate() {
+            (render_image_result(result, &query, None, page, i as u32).map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?)
         }
         @if results.len() != 0 as usize {
             div hx-post="/image/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
@@ -228,14 +227,28 @@ async fn search_page_results_image(
     })
 }
 
-fn render_image_result(result: &SearchImageResult) -> Markup {
-    html! {
-        div class="flex flex-col m-4 w-fit max-w-64" {
-            img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md" alt=(result.alt_text()) {}//bg-white
+fn render_image_result(
+    result: &SearchImageResult,
+    query: &str,
+    size_range: Option<SizeRange>,
+    page: u32,
+    i: u32,
+) -> anyhow::Result<Markup> {
+    let view_data = serde_json::to_string(&ViewData {
+        query: query.to_owned(),
+        size_range,
+        page,
+        item: i,
+    })?;
+
+    Ok(html! {
+        div class="flex flex-col m-4 w-fit max-w-48" {
+            img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md" alt=(result.alt_text())
+                hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) {}
 
             a href=(result.source_url) class="min-w-0 flex flex-col" {
                 div class="flex flex-row items-center min-w-0" {
-                    img src=(result.source_icon_url.as_deref().unwrap_or("/public/gloabe.svg")) class="w-4 h-4 bg-white rounded-full mr-2" {}
+                    img src=(result.source_icon_url.as_deref().unwrap_or("/public/gloabe.svg")) class="w-4 h-4 bg-white rounded-full mr-2 p-0.5" {}
                     span class="text-ellipsis min-w-0 overflow-hidden whitespace-nowrap" {
                         (result.source_title)
                     }
@@ -245,5 +258,71 @@ fn render_image_result(result: &SearchImageResult) -> Markup {
                 }
             }
         }
-    }
+    })
+}
+
+//TODO - Get this info from previus url
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ViewData {
+    query: String,
+    size_range: Option<SizeRange>,
+    page: u32,
+    item: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SizeRange {
+    pub min_width: u32,
+    pub min_height: u32,
+    pub max_width: u32,
+    pub max_height: u32,
+}
+
+pub async fn image_view(
+    State(state): State<Arc<AppState>>,
+    view_state: Option<Form<ViewData>>,
+) -> Result<Markup, (StatusCode, String)> {
+    Ok(match view_state {
+        Some(Form(view_data)) => {
+            //get data
+
+            let img_list = state
+                .client
+                .lock()
+                .await
+                .search_image(SearchImageRequest {
+                    query: Some(proto::search::SearchQuery {
+                        query: view_data.query,
+                        page: view_data.page,
+                    }),
+                    size: view_data.size_range.map(|range| proto::search::SizeRange {
+                        min_width: range.min_width,
+                        min_height: range.min_height,
+                        max_width: range.max_width,
+                        max_height: range.max_height,
+                    }),
+                })
+                .await
+                .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
+                .into_inner()
+                .results;
+            let img = img_list.get(view_data.item as usize).ok_or((
+                StatusCode::BAD_REQUEST,
+                "item outside of page range".to_owned(),
+            ))?;
+
+            html! {
+                div id="image-view" class="flex flex-col border-l transition-all flex-1" {
+                    button class="self-end" hx- post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
+
+                    img src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
+
+
+                }
+            }
+        }
+        None => html! {
+            div id="image-view" class="flex flex-col border-l-0 transition-all flex-none" {}
+        },
+    })
 }
