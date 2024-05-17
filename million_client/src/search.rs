@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::State,
+    http::{HeaderMap, HeaderName, StatusCode, Uri},
+    Json,
+};
 use maud::{html, Markup};
 
 use proto::search::{SearchImageRequest, SearchImageResult, SearchWebRequest, SearchWebResult};
@@ -27,7 +31,7 @@ pub async fn search_page(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.query.clone(),
         page: None,
-        extra: query.extra,
+        size_range: query.size_range,
     })
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -143,7 +147,7 @@ async fn search_page_results_html(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
         page: Some(page + 1),
-        extra: None,
+        size_range: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
@@ -217,13 +221,13 @@ async fn search_page_results_image(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
         page: Some(page + 1),
-        extra: None,
+        size_range: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     Ok(html! {
         @for (i, result) in results.iter().enumerate() {
-            (render_image_result(result, &query, None, page, i as u32).map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?)
+            (render_image_result(result, page, i as u32).map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?)
         }
         @if !results.is_empty() {
             div hx-post="/image/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
@@ -231,16 +235,8 @@ async fn search_page_results_image(
     })
 }
 
-fn render_image_result(
-    result: &SearchImageResult,
-    query: &str,
-    size_range: Option<SizeRange>,
-    page: u32,
-    i: u32,
-) -> anyhow::Result<Markup> {
+fn render_image_result(result: &SearchImageResult, page: u32, i: u32) -> anyhow::Result<Markup> {
     let view_data = serde_json::to_string(&ViewData {
-        query: query.to_owned(),
-        size_range,
         page,
         item: i as i32,
     })?;
@@ -268,24 +264,34 @@ fn render_image_result(
 //TODO - Get this info from previus url
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ViewData {
-    query: String,
-    size_range: Option<SizeRange>,
     page: u32,
     item: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SizeRange {
-    pub min_width: u32,
-    pub min_height: u32,
-    pub max_width: u32,
-    pub max_height: u32,
-}
-
 pub async fn image_view(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     view_state: Option<Json<ViewData>>,
 ) -> Result<Markup, (StatusCode, String)> {
+    let current_url = headers
+        .get(HeaderName::from_static("hx-current-url"))
+        .ok_or((
+            StatusCode::BAD_REQUEST,
+            "need hx-current_url header".to_owned(),
+        ))?
+        .to_str()
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
+        .parse::<Uri>()
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+
+    let current_query = current_url.query().ok_or((
+        StatusCode::BAD_REQUEST,
+        "hx-current-url header should have query params".to_owned(),
+    ))?;
+
+    let search_query = serde_qs::from_str::<SearchQuery>(current_query)
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+
     Ok(match view_state {
         Some(Json(view_data)) => {
             let img_list = state
@@ -294,10 +300,10 @@ pub async fn image_view(
                 .await
                 .search_image(SearchImageRequest {
                     query: Some(proto::search::SearchQuery {
-                        query: view_data.query.clone(),
+                        query: search_query.query.clone(),
                         page: view_data.page,
                     }),
-                    size: view_data
+                    size: search_query
                         .size_range
                         .as_ref()
                         .map(|range| proto::search::SizeRange {
@@ -328,8 +334,6 @@ pub async fn image_view(
             ))?;
 
             let next_view = serde_json::to_string(&ViewData {
-                query: view_data.query.clone(),
-                size_range: view_data.size_range.clone(),
                 page: view_data.page
                     + if item + 1 >= img_list.len() as i32 {
                         1
@@ -344,15 +348,13 @@ pub async fn image_view(
             })
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
             let prev_view = serde_json::to_string(&ViewData {
-                query: view_data.query,
-                size_range: view_data.size_range,
                 page: view_data.page - if item - 1 < 0 { 1 } else { 0 },
                 item: if item - 1 < 0 { -1 } else { item - 1 },
             })
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
             html! {
-                div id="image-view" class="flex flex-col border-l border-neutral-200 dark:border-zinc-700 transition-all flex-1 overflow-scroll p-4" {
+                div id="image-view" class="flex flex-col border-l border-neutral-200 dark:border-zinc-700 transition-all flex-1 overflow-y-scroll p-4" {
                     div class="flex flex-row items-center pb-8" {
                         div class="flex flex-1 flex-row items-center" {
                             img class="self-center w-4 h-4 rounded-full mr-2 bg-white" src=(img.source.as_ref().unwrap().icon_url.as_deref().unwrap_or("/public/gloabe.svg")) alt=(img.alt_text.as_deref().unwrap_or_default()) {}

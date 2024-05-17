@@ -91,67 +91,51 @@ async fn home_search_image() -> Result<Markup, StatusCode> {
 }
 
 #[derive(Deserialize, Serialize)]
-enum ExtraSearchQuery {
-    Image { size: Size },
-}
-
-#[derive(Deserialize, Serialize)]
 struct SearchQuery {
     query: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     page: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra: Option<ExtraSearchQuery>,
+    size_range: Option<SizeRange>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-struct Size {
-    width: u32,
-    height: u32,
+pub struct SizeRange {
+    pub min_width: u32,
+    pub min_height: u32,
+    pub max_width: u32,
+    pub max_height: u32,
 }
 
 async fn search_html(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, StatusCode> {
-    match Option::<ExtraSearchQuery>::None {
-        None => search_page(SearchType::Html, query, state).await,
-        Some(_) => Err(StatusCode::BAD_REQUEST),
-    }
+    search_page(SearchType::Html, query, state).await
 }
 async fn search_image(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, StatusCode> {
-    match Option::<ExtraSearchQuery>::None {
-        Some(ExtraSearchQuery::Image { size: _ }) | None => {
-            search_page(SearchType::Image, query, state).await
-        } // Some(_) => Err(StatusCode::BAD_REQUEST),
-    }
+    search_page(SearchType::Image, query, state).await
 }
 
 async fn search_html_results(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, (StatusCode, String)> {
-    match query.extra {
-        None => search_page_results(SearchType::Html, query, state).await,
-        Some(_) => Err((
+    if query.size_range.is_some() {
+        return Err((
             StatusCode::BAD_REQUEST,
             String::from("incorrect query params for search type"),
-        )),
+        ));
     }
+
+    search_page_results(SearchType::Html, query, state).await
 }
 async fn search_image_results(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, (StatusCode, String)> {
-    match query.extra {
-        Some(ExtraSearchQuery::Image { size: _ }) | None => {
-            search_page_results(SearchType::Image, query, state).await
-        } // Some(_) => Err((
-          //     StatusCode::BAD_REQUEST,
-          //     String::from("incorrect query params for search type"),
-          // )),
-    }
+    search_page_results(SearchType::Image, query, state).await
 }

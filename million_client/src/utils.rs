@@ -5,7 +5,7 @@ use maud::{html, Markup, DOCTYPE};
 use proto::search::CompleteSearchRequest;
 use serde::{Deserialize, Serialize};
 
-use crate::{AppState, ExtraSearchQuery, SearchQuery, SearchType};
+use crate::{AppState, SearchQuery, SearchType};
 
 pub fn basic_page(body: Markup) -> Markup {
     html! {
@@ -57,7 +57,6 @@ pub fn search_bar(query: &str, search_type: SearchType) -> anyhow::Result<Markup
 pub struct SearchSuggestionQuery {
     query: String,
     search_type: SearchType,
-    current_params: Option<ExtraSearchQuery>,
 }
 
 pub async fn search_suggestions(
@@ -81,13 +80,13 @@ pub async fn search_suggestions(
         SearchType::Html => "/search",
         SearchType::Image => "/image/search",
     };
-
+    //TODO: get size range from current url
     Ok(html! {
         @for possibility in &possibilities {
             @let search_params = serde_url_params::to_string(&SearchQuery {
                 query: possibility.clone(),
                 page: None,
-                extra: None,
+                size_range: None,
             })
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
