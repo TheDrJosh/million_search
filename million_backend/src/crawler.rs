@@ -135,13 +135,12 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
             url.set_fragment(None);
 
-            if crawler_queue::Entity::find()
+            if !crawler_queue::Entity::find()
                 .filter(crawler_queue::Column::Url.eq(url.to_string()))
                 .all(&self.db)
                 .await
                 .map_err(|err| Status::from_error(err.into()))?
-                .len()
-                != 0
+                .is_empty()
             {
                 continue;
             }
@@ -157,77 +156,70 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                 .map_err(|err| Status::from_error(err.into()))?;
         }
 
-        match result.body {
-            Some(html_body) => {
-                let website = websites::ActiveModel {
-                    url: ActiveValue::Set(request.url.clone()),
-                    title: ActiveValue::Set(html_body.title),
-                    description: ActiveValue::Set(html_body.description),
-                    icon_url: ActiveValue::Set(html_body.icon_url),
+        if let Some(html_body) = result.body {
+            let website = websites::ActiveModel {
+                url: ActiveValue::Set(request.url.clone()),
+                title: ActiveValue::Set(html_body.title),
+                description: ActiveValue::Set(html_body.description),
+                icon_url: ActiveValue::Set(html_body.icon_url),
 
-                    text_fields: ActiveValue::Set(html_body.text_fields),
-                    sections: ActiveValue::Set(html_body.sections),
+                text_fields: ActiveValue::Set(html_body.text_fields),
+                sections: ActiveValue::Set(html_body.sections),
 
-                    site_name: ActiveValue::Set(
-                        html_body
-                            .manifest
-                            .as_ref()
-                            .map(|manifest| manifest.name.clone())
-                            .flatten(),
-                    ),
-                    site_short_name: ActiveValue::Set(
-                        html_body
-                            .manifest
-                            .as_ref()
-                            .map(|manifest| manifest.short_name.clone())
-                            .flatten(),
-                    ),
-                    site_description: ActiveValue::Set(
-                        html_body
-                            .manifest
-                            .as_ref()
-                            .map(|manifest| manifest.description.clone())
-                            .flatten(),
-                    ),
-                    site_categories: ActiveValue::Set(
-                        html_body
-                            .manifest
-                            .as_ref()
-                            .map(|manifest| manifest.categories.clone())
-                            .unwrap_or_default(),
-                    ),
+                site_name: ActiveValue::Set(
+                    html_body
+                        .manifest
+                        .as_ref()
+                        .and_then(|manifest| manifest.name.clone()),
+                ),
+                site_short_name: ActiveValue::Set(
+                    html_body
+                        .manifest
+                        .as_ref()
+                        .and_then(|manifest| manifest.short_name.clone()),
+                ),
+                site_description: ActiveValue::Set(
+                    html_body
+                        .manifest
+                        .as_ref()
+                        .and_then(|manifest| manifest.description.clone()),
+                ),
+                site_categories: ActiveValue::Set(
+                    html_body
+                        .manifest
+                        .as_ref()
+                        .map(|manifest| manifest.categories.clone())
+                        .unwrap_or_default(),
+                ),
 
+                ..Default::default()
+            };
+            let website = website
+                .insert(&self.db)
+                .await
+                .map_err(|err| Status::from_error(err.into()))?;
+
+            for img in html_body.images {
+                //TODO - Remove duplicates
+                //TODO - Don't add images without text
+                let (width, height) = if let Some(size) = img.size {
+                    (Some(size.width), Some(size.height))
+                } else {
+                    (None, None)
+                };
+                let image = entity::image::ActiveModel {
+                    url: ActiveValue::Set(img.image_url),
+                    width: ActiveValue::Set(width),
+                    height: ActiveValue::Set(height),
+                    alt_text: ActiveValue::Set(img.alt_text),
+                    source: ActiveValue::Set(website.id),
                     ..Default::default()
                 };
-                let website = website
+                image
                     .insert(&self.db)
                     .await
                     .map_err(|err| Status::from_error(err.into()))?;
-
-                for img in html_body.images {
-                    //TODO - Remove duplicates
-                    //TODO - Don't add images without text 
-                    let (width, height) = if let Some(size) = img.size {
-                        (Some(size.width), Some(size.height))
-                    } else {
-                        (None, None)
-                    };
-                    let image = entity::image::ActiveModel {
-                        url: ActiveValue::Set(img.image_url),
-                        width: ActiveValue::Set(width),
-                        height: ActiveValue::Set(height),
-                        alt_text: ActiveValue::Set(img.alt_text),
-                        source: ActiveValue::Set(website.id),
-                        ..Default::default()
-                    };
-                    image
-                        .insert(&self.db)
-                        .await
-                        .map_err(|err| Status::from_error(err.into()))?;
-                }
             }
-
-            None => {}
         }
 
         Ok(Response::new(ReturnJobResponse {}))

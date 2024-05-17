@@ -151,7 +151,6 @@ impl proto::search::search_server::Search for SearchServise {
             .map(|(image_model, website_model)| {
                 let website_model = website_model.unwrap();
                 SearchImageResult {
-                    // id: image_model.id,
                     url: image_model.url,
                     alt_text: image_model.alt_text,
                     size: image_model
@@ -161,10 +160,6 @@ impl proto::search::search_server::Search for SearchServise {
                             width: width as u32,
                             height: height as u32,
                         }),
-                    // source_id: website_model.id,
-                    // source_url: website_model.url.clone(),
-                    // source_icon_url: website_model.icon_url.clone(),
-                    // source_title: display_site_name(&website_model),
                     source: Some(SearchWebResult {
                         url: website_model.url.clone(),
                         title: website_model.title.clone(),

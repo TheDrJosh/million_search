@@ -151,7 +151,7 @@ async fn search_page_results_html(
         @for result in &results {
             (render_html_result(result))
         }
-        @if results.len() != 0 as usize {
+        @if !results.is_empty() {
             div hx-post="/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
         }
     })
@@ -225,7 +225,7 @@ async fn search_page_results_image(
         @for (i, result) in results.iter().enumerate() {
             (render_image_result(result, &query, None, page, i as u32).map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?)
         }
-        @if results.len() != 0 as usize {
+        @if !results.is_empty() {
             div hx-post="/image/search" hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
         }
     })
@@ -295,7 +295,7 @@ pub async fn image_view(
                 .search_image(SearchImageRequest {
                     query: Some(proto::search::SearchQuery {
                         query: view_data.query.clone(),
-                        page: view_data.page.clone(),
+                        page: view_data.page,
                     }),
                     size: view_data
                         .size_range

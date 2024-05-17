@@ -76,10 +76,8 @@ impl SelectorSet {
     pub fn select_manifest_url(&self, doc: &Html, page_url: &Url) -> Option<Url> {
         doc.select(&self.link_manifest_selector)
             .next()
-            .map(|link_manifest| link_manifest.attr("href"))
-            .flatten()
-            .map(|link_manifest_url| Self::normalize_url(link_manifest_url, page_url).ok())
-            .flatten()
+            .and_then(|link_manifest| link_manifest.attr("href"))
+            .and_then(|link_manifest_url| Self::normalize_url(link_manifest_url, page_url).ok())
     }
 
     pub fn select_images(&self, doc: &Html, page_url: &Url) -> Vec<(Url, Option<String>)> {
@@ -103,18 +101,15 @@ impl SelectorSet {
     pub fn select_description(&self, doc: &Html) -> Option<String> {
         doc.select(&self.description_selector)
             .next()
-            .map(|description| description.attr("content"))
-            .flatten()
+            .and_then(|description| description.attr("content"))
             .map(|description| description.to_owned())
     }
 
     pub fn select_icon_url(&self, doc: &Html, page_url: &Url) -> Option<Url> {
         doc.select(&self.icon_link_selector)
             .next()
-            .map(|icon_url| icon_url.attr("href"))
-            .flatten()
-            .map(|icon_url| Self::normalize_url(icon_url, page_url).ok())
-            .flatten()
+            .and_then(|icon_url| icon_url.attr("href"))
+            .and_then(|icon_url| Self::normalize_url(icon_url, page_url).ok())
     }
 
     pub fn select_text_fields(&self, doc: &Html) -> Vec<String> {
@@ -174,7 +169,7 @@ impl SelectorSet {
         let icon_tags = doc
             .select(&self.icon_selector)
             .map(|elem| elem.attr("icon").unwrap());
-        let manifest_tags = doc
+        let manifest_tags = doc 
             .select(&self.manifest_selector)
             .map(|elem| elem.attr("manifest").unwrap());
         let poster_tags = doc
@@ -185,7 +180,7 @@ impl SelectorSet {
             .select(&self.srcset_selector)
             .map(|elem| elem.attr("srcset").unwrap())
             .flat_map(|attr| attr.split(',').map(|csl| csl.split(' ').nth(1)))
-            .filter_map(|url| url);
+            .flatten();
         let archive_tags = doc
             .select(&self.archive_selector)
             .map(|elem| elem.attr("archive").unwrap())

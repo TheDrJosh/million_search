@@ -112,8 +112,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
 
     let mime_type = headers
         .get("Content-Type")
-        .map(|mt| mt.to_str().ok().map(|mt| mt.to_owned()))
-        .flatten()
+        .and_then(|mt| mt.to_str().ok().map(|mt| mt.to_owned()))
         .unwrap_or_default();
 
     Ok(if mime_type.is_empty() || mime_type.contains("html") {
@@ -157,8 +156,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                     image::io::Reader::new(Cursor::new(img_bytes))
                         .with_guessed_format()
                         .ok()
-                        .map(|img| img.decode().ok())
-                        .flatten()
+                        .and_then(|img| img.decode().ok())
                         .map(|img| return_job_request::ok::body::image::Size {
                             width: img.width() as i32,
                             height: img.height() as i32,
@@ -226,7 +224,7 @@ async fn get_job(client: &mut CrawlerClient<Channel>) -> Result<GetJobResponse, 
         }
     }
 
-    return Err(Status::unavailable("cant get job from server"));
+    Err(Status::unavailable("cant get job from server"))
 }
 
 #[derive(Debug, Deserialize)]
