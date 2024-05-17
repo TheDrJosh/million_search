@@ -23,8 +23,6 @@ async fn main() -> anyhow::Result<()> {
 
     let search_client = Client::new("http://meilisearch:7700", Option::<String>::None);
 
-    //TODO - Set Searchable feilds
-
     search_client
         .index("websites")
         .set_searchable_attributes([

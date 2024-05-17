@@ -206,6 +206,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
                 for img in html_body.images {
                     //TODO - Remove duplicates
+                    //TODO - Don't add images without text 
                     let (width, height) = if let Some(size) = img.size {
                         (Some(size.width), Some(size.height))
                     } else {

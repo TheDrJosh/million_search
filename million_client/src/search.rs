@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     utils::{basic_page, search_bar},
-    AppState, SearchQuery, SearchQueryList, SearchType,
+    AppState, SearchQuery, SearchType,
 };
 
 pub async fn search_page(
@@ -24,9 +24,9 @@ pub async fn search_page(
         SearchType::Image => "/image/search",
     };
 
-    let search_params = serde_json::to_string(&SearchQueryList {
+    let search_params = serde_json::to_string(&SearchQuery {
         query: query.query.clone(),
-        page: 0,
+        page: None,
         extra: query.extra,
     })
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -45,7 +45,7 @@ pub async fn search_page(
         }
         SearchType::Image => html! {
             div class="flex flex-row h-full overflow-hidden" {
-                div class="flex flex-row flex-wrap items-center flex-[2] overflow-y-scroll" {
+                div class="flex flex-row flex-wrap flex-[2] overflow-y-scroll" {
                     (grab_list)
                 }
                 div id="image-view" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {}
@@ -106,13 +106,17 @@ pub async fn search_page(
 
 pub async fn search_page_results(
     search_type: SearchType,
-    query: SearchQueryList,
+    query: SearchQuery,
     state: Arc<AppState>,
 ) -> Result<Markup, (StatusCode, String)> {
     // tokio::time::sleep(Duration::from_secs(2)).await; // use for loading spinner testing
     match search_type {
-        SearchType::Html => search_page_results_html(query.query, query.page, state).await,
-        SearchType::Image => search_page_results_image(query.query, query.page, state).await,
+        SearchType::Html => {
+            search_page_results_html(query.query, query.page.unwrap_or(1), state).await
+        }
+        SearchType::Image => {
+            search_page_results_image(query.query, query.page.unwrap_or(1), state).await
+        }
     }
 }
 
@@ -128,7 +132,7 @@ async fn search_page_results_html(
         .search_web(SearchWebRequest {
             query: Some(proto::search::SearchQuery {
                 query: query.clone(),
-                page: page + 1,
+                page,
             }),
         })
         .await
@@ -136,9 +140,9 @@ async fn search_page_results_html(
         .into_inner()
         .results;
 
-    let search_params = serde_json::to_string(&SearchQueryList {
+    let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
-        page: page + 1,
+        page: Some(page + 1),
         extra: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
@@ -201,7 +205,7 @@ async fn search_page_results_image(
         .search_image(SearchImageRequest {
             query: Some(proto::search::SearchQuery {
                 query: query.clone(),
-                page: page + 1,
+                page,
             }),
             size: None,
         })
@@ -210,9 +214,9 @@ async fn search_page_results_image(
         .into_inner()
         .results;
 
-    let search_params = serde_json::to_string(&SearchQueryList {
+    let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
-        page: page + 1,
+        page: Some(page + 1),
         extra: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
@@ -246,11 +250,11 @@ fn render_image_result(
             img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md" alt=(result.alt_text())
                 hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) hx-ext="json-enc" {}
 
-            a href=(result.source_url) class="min-w-0 flex flex-col" {
+            a href=(result.source.as_ref().unwrap().url) class="min-w-0 flex flex-col" {
                 div class="flex flex-row items-center min-w-0" {
-                    img src=(result.source_icon_url.as_deref().unwrap_or("/public/gloabe.svg")) class="w-4 h-4 bg-white rounded-full mr-2 p-0.5" {}
+                    img src=(result.source.as_ref().unwrap().icon_url.as_deref().unwrap_or("/public/gloabe.svg")) class="w-4 h-4 bg-white rounded-full mr-2 p-0.5" {}
                     span class="text-ellipsis min-w-0 overflow-hidden whitespace-nowrap" {
-                        (result.source_title)
+                        (display_site_name(result.source.as_ref().unwrap()))
                     }
                 }
                 span class="text-ellipsis min-w-0 overflow-hidden whitespace-nowrap" {
@@ -284,8 +288,6 @@ pub async fn image_view(
 ) -> Result<Markup, (StatusCode, String)> {
     Ok(match view_state {
         Some(Json(view_data)) => {
-            //get data
-
             let img_list = state
                 .client
                 .lock()
@@ -293,7 +295,7 @@ pub async fn image_view(
                 .search_image(SearchImageRequest {
                     query: Some(proto::search::SearchQuery {
                         query: view_data.query.clone(),
-                        page: view_data.page.clone() + 1,
+                        page: view_data.page.clone(),
                     }),
                     size: view_data
                         .size_range
@@ -315,8 +317,6 @@ pub async fn image_view(
             } else {
                 view_data.item
             };
-
-            println!("Item: {}", item);
 
             let img = img_list.get(item as usize).ok_or((
                 StatusCode::BAD_REQUEST,
@@ -352,16 +352,31 @@ pub async fn image_view(
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
             html! {
-                div id="image-view" class="flex flex-col border-l transition-all flex-1 overflow-hidden" {
-                    div class="self-end" {
-                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) hx-ext="json-enc" {"<"}
-                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) hx-ext="json-enc" {">"}
-                        button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
+                div id="image-view" class="flex flex-col border-l border-neutral-200 dark:border-zinc-700 transition-all flex-1 overflow-scroll p-4" {
+                    div class="flex flex-row items-center pb-8" {
+                        div class="flex flex-1 flex-row items-center" {
+                            img class="self-center w-4 h-4 rounded-full mr-2 bg-white" src=(img.source.as_ref().unwrap().icon_url.as_deref().unwrap_or("/public/gloabe.svg")) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
+                            span class="text" {
+                                (display_site_name(img.source.as_ref().unwrap()))
+                            }
+                        }
+                        div class="flex flex-row pl-8 items-center font-semibold" {
+                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) hx-ext="json-enc" {"<"}
+                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) hx-ext="json-enc" {">"}
+                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
+                        }
                     }
 
-                    img  class="self-center" src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
+                    img class="self-center m-2 w-full rounded" src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
 
-
+                    div class="flex flex-row pt-4 items-center" {
+                        span class="flex-1" {
+                            (img.alt_text())
+                        }
+                        a href=(img.source.as_ref().unwrap().url) class="px-2 py-1 rounded-xl bg-sky-200 text-black font-semibold self-start h-fit" {
+                            "Visit >"
+                        }
+                    }
                 }
             }
         }
@@ -369,4 +384,13 @@ pub async fn image_view(
             div id="image-view" class="flex flex-col border-l-0 transition-all flex-none" {}
         },
     })
+}
+
+fn display_site_name(website: &SearchWebResult) -> String {
+    website
+        .site_name
+        .as_deref()
+        .or(website.title.as_deref())
+        .unwrap_or(website.url.as_str())
+        .to_owned()
 }

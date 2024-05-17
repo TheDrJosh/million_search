@@ -5,7 +5,7 @@ use maud::{html, Markup, DOCTYPE};
 use proto::search::CompleteSearchRequest;
 use serde::{Deserialize, Serialize};
 
-use crate::{AppState, SearchType};
+use crate::{AppState, ExtraSearchQuery, SearchQuery, SearchType};
 
 pub fn basic_page(body: Markup) -> Markup {
     html! {
@@ -57,12 +57,13 @@ pub fn search_bar(query: &str, search_type: SearchType) -> anyhow::Result<Markup
 pub struct SearchSuggestionQuery {
     query: String,
     search_type: SearchType,
+    current_params: Option<ExtraSearchQuery>,
 }
 
 pub async fn search_suggestions(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchSuggestionQuery>,
-) -> Result<Markup, StatusCode> {
+) -> Result<Markup, (StatusCode, String)> {
     let suggestions = state
         .client
         .lock()
@@ -71,7 +72,7 @@ pub async fn search_suggestions(
             current: query.query,
         })
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
         .into_inner();
 
     let possibilities = suggestions.possibilities;
@@ -80,10 +81,17 @@ pub async fn search_suggestions(
         SearchType::Html => "/search",
         SearchType::Image => "/image/search",
     };
-    //TODO - Use proper serde query genneration
+
     Ok(html! {
-        @for possibility in possibilities {
-            a href=(search_url.to_owned() + "?query=" + &possibility) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {
+        @for possibility in &possibilities {
+            @let search_params = serde_url_params::to_string(&SearchQuery {
+                query: possibility.clone(),
+                page: None,
+                extra: None,
+            })
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+
+            a href=(search_url.to_owned() + "?" + &search_params) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {
                 (possibility)
             }
         }

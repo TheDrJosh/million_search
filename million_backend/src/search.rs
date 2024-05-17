@@ -162,9 +162,18 @@ impl proto::search::search_server::Search for SearchServise {
                             height: height as u32,
                         }),
                     // source_id: website_model.id,
-                    source_url: website_model.url.clone(),
-                    source_icon_url: website_model.icon_url.clone(),
-                    source_title: display_site_name(&website_model),
+                    // source_url: website_model.url.clone(),
+                    // source_icon_url: website_model.icon_url.clone(),
+                    // source_title: display_site_name(&website_model),
+                    source: Some(SearchWebResult {
+                        url: website_model.url.clone(),
+                        title: website_model.title.clone(),
+                        description: website_model.description.clone(),
+                        icon_url: website_model.icon_url.clone(),
+                        inner_text_match: None,
+                        site_name: website_model.site_name.clone(),
+                        site_description: website_model.site_description.clone(),
+                    }),
                 }
             })
             .collect::<Vec<_>>();
@@ -199,17 +208,6 @@ async fn save_search_to_history(db: &DatabaseConnection, search: &str) -> anyhow
         .await?;
 
     Ok(())
-}
-
-//TODO - Make This Frontend
-fn display_site_name(website: &websites::Model) -> String {
-    website
-        .site_name
-        .as_deref()
-        .or(website.site_short_name.as_deref())
-        .or(website.title.as_deref())
-        .unwrap_or(website.url.as_str())
-        .to_owned()
 }
 
 #[derive(Serialize, Deserialize)]

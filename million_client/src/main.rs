@@ -91,19 +91,15 @@ async fn home_search_image() -> Result<Markup, StatusCode> {
 }
 
 #[derive(Deserialize, Serialize)]
-struct SearchQuery {
-    query: String,
-    extra: Option<ExtraSearchQuery>,
-}
-#[derive(Deserialize, Serialize)]
 enum ExtraSearchQuery {
     Image { size: Size },
 }
 
 #[derive(Deserialize, Serialize)]
-struct SearchQueryList {
+struct SearchQuery {
     query: String,
-    page: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    page: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     extra: Option<ExtraSearchQuery>,
 }
@@ -136,7 +132,7 @@ async fn search_image(
 
 async fn search_html_results(
     State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQueryList>,
+    Form(query): Form<SearchQuery>,
 ) -> Result<Markup, (StatusCode, String)> {
     match query.extra {
         None => search_page_results(SearchType::Html, query, state).await,
@@ -148,7 +144,7 @@ async fn search_html_results(
 }
 async fn search_image_results(
     State(state): State<Arc<AppState>>,
-    Form(query): Form<SearchQueryList>,
+    Form(query): Form<SearchQuery>,
 ) -> Result<Markup, (StatusCode, String)> {
     match query.extra {
         Some(ExtraSearchQuery::Image { size: _ }) | None => {
