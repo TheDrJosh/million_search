@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, Form, Json};
+use axum::{extract::State, http::StatusCode, Json};
 use maud::{html, Markup};
 
 use proto::search::{SearchImageRequest, SearchImageResult, SearchWebRequest, SearchWebResult};
@@ -38,13 +38,13 @@ pub async fn search_page(
     let surrounding_formating = match search_type {
         SearchType::Html => {
             html! {
-                div class="flex flex-col" {
+                div class="flex flex-col h-full overflow-y-scroll" {
                     (grab_list)
                 }
             }
         }
         SearchType::Image => html! {
-            div class="flex flex-row" {
+            div class="flex flex-row h-full overflow-hidden" {
                 div class="flex flex-row flex-wrap items-center flex-[2] overflow-y-scroll" {
                     (grab_list)
                 }
@@ -54,7 +54,7 @@ pub async fn search_page(
     };
 
     Ok(basic_page(html! {
-        div class="min-h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {
+        div class="h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {//min-h-lvh
             header class="flex flex-col pt-6 pb-2 border-b-2 border-neutral-200 dark:border-zinc-700 w-full items-center " {
                 div class="flex flex-row w-full items-center" {
                     @match search_type {
@@ -92,7 +92,7 @@ pub async fn search_page(
                 }
             }
 
-            div class="flex-1 px-6 pt-4 overflow-y-scroll w-full" {
+            div class="flex-1 px-6 pt-4 w-full overflow-hidden" {//overflow-y-scroll
                 (surrounding_formating)
             }
 
@@ -352,7 +352,7 @@ pub async fn image_view(
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
             html! {
-                div id="image-view" class="flex flex-col border-l transition-all flex-1" {
+                div id="image-view" class="flex flex-col border-l transition-all flex-1 overflow-hidden" {
                     div class="self-end" {
                         button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) hx-ext="json-enc" {"<"}
                         button class="" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) hx-ext="json-enc" {">"}

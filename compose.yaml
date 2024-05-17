@@ -12,6 +12,7 @@ services:
     depends_on:
       - database
       - meilisearch
+      - meilisync
   frontend:
     build:
       context: .
