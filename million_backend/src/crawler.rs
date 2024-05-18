@@ -92,7 +92,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
         let _url = Url::from_str(&request.url).map_err(|err| Status::from_error(err.into()))?;
 
         let task = crawler_queue::Entity::find_by_id(request.id)
-            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .filter(crawler_queue::Column::Url.eq(&request.url))
             .one(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?
@@ -123,7 +123,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
                 chrono::Utc::now().naive_utc().into(),
             )
             .filter(crawler_queue::Column::Id.eq(request.id))
-            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .filter(crawler_queue::Column::Url.eq(&request.url))
             .exec(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?;
@@ -165,6 +165,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
                 text_fields: ActiveValue::Set(html_body.text_fields),
                 sections: ActiveValue::Set(html_body.sections),
+                keywords: ActiveValue::Set(html_body.keywords),
 
                 site_name: ActiveValue::Set(
                     html_body
@@ -241,7 +242,7 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
 
         crawler_queue::Entity::update(task)
             .filter(crawler_queue::Column::Id.eq(request.id))
-            .filter(crawler_queue::Column::Url.eq(request.url.clone()))
+            .filter(crawler_queue::Column::Url.eq(&request.url))
             .exec(&self.db)
             .await
             .map_err(|err| Status::from_error(err.into()))?;

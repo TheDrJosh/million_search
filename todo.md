@@ -2,20 +2,20 @@
 
 - [x] Add Config to servers
 - [x] Implement No got back
-- [x] add compretion to grpc
-- [x] add compretion to client
+- [x] add compression to grpc
+- [x] add compression to client
 - [ ] add tls to grpc
 - [x] keep search history
 - [x] read manifest.json
-- [ ] read meta keywords
+- [x] read meta keywords
 - [x] search complete
 - [ ] keep error logs
 - [ ] use robot.txt
 - [ ] logging
-- [ ] auth
+- [ ] auth for crawler and admin
 - [ ] no js mode
 - [ ] have high contrast background <https://stackoverflow.com/questions/3942878/how-to-decide-font-color-in-white-or-black-depending-on-background-color> <https://www.w3.org/TR/WCAG20/>
 - [ ] selection indecator for the image sidebar
 - [ ] dont allow blank search
-- [ ] use hx-boost
-- [ ] reduce clones
+- [x] use hx-boost
+- [ ] add tls to client

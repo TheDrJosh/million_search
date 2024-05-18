@@ -6,9 +6,8 @@ use futures::future::join_all;
 use lazy_static::lazy_static;
 use proto::{
     crawler::{
-        crawler_client::CrawlerClient,
-        return_job_request,
-        GetJobRequest, GetJobResponse, ReturnJobRequest,
+        crawler_client::CrawlerClient, return_job_request, GetJobRequest, GetJobResponse,
+        ReturnJobRequest,
     },
     tonic::{codec::CompressionEncoding, transport::Channel, Code, Status},
 };
@@ -125,11 +124,12 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
 
         let job_url_other = job_url.clone();
 
-        let (html, urls, manifest_url) = spawn_blocking(move || {
+        let (html, urls, manifest_url, keywords) = spawn_blocking(move || {
             let html = scraper::Html::parse_document(&text);
             let urls = SELECTOR.select_urls(&html, &job_url_other);
             let manifest_url = SELECTOR.select_manifest_url(&html, &job_url_other);
-            (html, urls, manifest_url)
+            let keywords = SELECTOR.select_keywords(&html);
+            (html, urls, manifest_url, keywords)
         })
         .await?;
 
@@ -191,6 +191,7 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
                     .map(|url| url.to_string()),
                 text_fields: SELECTOR.select_text_fields(&html),
                 sections: SELECTOR.select_sections(&html),
+                keywords,
                 manifest,
                 images,
             }),

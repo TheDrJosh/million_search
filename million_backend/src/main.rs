@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
             "title",
             "description",
             "sections",
+            "keywords",
             "text_fields",
             "site_name",
             "site_short_name",

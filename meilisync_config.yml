@@ -24,6 +24,7 @@ sync:
     description:
     text_fields:
     sections:
+    keywords:
 
 - table: image
   index: image

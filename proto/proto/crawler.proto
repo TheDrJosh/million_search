@@ -42,9 +42,11 @@ message ReturnJobRequest {
 
       repeated string text_fields = 4;
       repeated string sections = 5;
-      optional Manifest manifest = 6;
+      repeated string keywords = 6;
 
-      repeated Image images = 7;
+      optional Manifest manifest = 7;
+
+      repeated Image images = 8;
 
       message Manifest {
         repeated string categories = 1;

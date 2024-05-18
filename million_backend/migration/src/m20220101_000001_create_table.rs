@@ -36,6 +36,11 @@ impl MigrationTrait for Migration {
                             .array(ColumnType::String(None))
                             .not_null(),
                     )
+                    .col(
+                        ColumnDef::new(Websites::Keywords)
+                            .array(ColumnType::String(None))
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Websites::SiteName).string())
                     .col(ColumnDef::new(Websites::SiteShortName).string())
                     .col(ColumnDef::new(Websites::SiteDescription).string())
@@ -113,7 +118,9 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(Table::drop().table(CrawlerQueue::Table).to_owned())
             .await?;
-        manager.drop_type(TypeDropStatement::new().name(Status).to_owned()).await?;
+        manager
+            .drop_type(TypeDropStatement::new().name(Status).to_owned())
+            .await?;
 
         Ok(())
     }
@@ -131,6 +138,7 @@ pub enum Websites {
 
     TextFields,
     Sections,
+    Keywords,
 
     SiteName,
     SiteShortName,

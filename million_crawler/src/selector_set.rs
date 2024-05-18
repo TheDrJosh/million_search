@@ -25,6 +25,7 @@ pub struct SelectorSet {
     title_selector: Selector,
     description_selector: Selector,
     icon_link_selector: Selector,
+    keyword_selector: Selector,
 
     text_fields_selector: Selector,
     sections_selector: Selector,
@@ -63,6 +64,7 @@ impl SelectorSet {
             title_selector: Selector::parse("title").unwrap(),
             description_selector: Selector::parse("meta[name=\"description\"][content]").unwrap(),
             icon_link_selector: Selector::parse("link[rel=\"icon\"][href]").unwrap(),
+            keyword_selector: Selector::parse("meta[name=\"keywords\"][content]").unwrap(),
 
             text_fields_selector: Selector::parse("p").unwrap(),
             sections_selector: Selector::parse("h1, h2, h3, h4, h5, h6").unwrap(),
@@ -96,6 +98,14 @@ impl SelectorSet {
         doc.select(&self.title_selector)
             .next()
             .map(|title| title.text().map(|text| text.to_string()).collect())
+    }
+
+    pub fn select_keywords(&self, doc: &Html) -> Vec<String> {
+        doc.select(&self.keyword_selector)
+            .next()
+            .and_then(|description| description.attr("content"))
+            .map(|description| description.split(',').map(|text| text.to_owned()).collect())
+            .unwrap_or_default()
     }
 
     pub fn select_description(&self, doc: &Html) -> Option<String> {
@@ -169,7 +179,7 @@ impl SelectorSet {
         let icon_tags = doc
             .select(&self.icon_selector)
             .map(|elem| elem.attr("icon").unwrap());
-        let manifest_tags = doc 
+        let manifest_tags = doc
             .select(&self.manifest_selector)
             .map(|elem| elem.attr("manifest").unwrap());
         let poster_tags = doc
