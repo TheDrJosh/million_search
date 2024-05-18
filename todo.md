@@ -19,3 +19,4 @@
 - [ ] dont allow blank search
 - [x] use hx-boost
 - [ ] add tls to client
+- [ ] add cache layer
