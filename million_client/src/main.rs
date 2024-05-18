@@ -27,9 +27,13 @@ mod utils;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value_t = String::from("http://backend:8080"))]
+    #[arg(short, long, env, default_value_t = String::from("http://backend:8080"))]
     endpoint: String,
-    #[arg(short, long, default_value_t = 3000)]
+
+    #[arg(short, long, env, default_value_t = String::from("0.0.0.0"))]
+    host_address: String,
+
+    #[arg(short, long, env, default_value_t = 3000)]
     port: u16,
 }
 
@@ -45,6 +49,8 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
+
+    //TODO - Backoff retry
     let client = SearchClient::connect(args.endpoint).await?;
 
     let state = Arc::new(AppState {

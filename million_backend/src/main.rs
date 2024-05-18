@@ -1,27 +1,51 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use admin::AdminServise;
+use clap::Parser;
 use crawler::CrawlerServise;
-use meilisearch_sdk::Client;
+use meilisearch_sdk::client::Client;
 use migration::{Migrator, MigratorTrait};
 use proto::tonic::transport::Server;
 use sea_orm::Database;
 use search::SearchServise;
+use tracing_subscriber::EnvFilter;
+use url::Url;
 
 mod admin;
 mod crawler;
 mod search;
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, env)]
+    database_url: Url,
+
+    #[arg(short, long, env)]
+    meilisearch_url: Url,
+
+    #[arg(short, long, env, default_value_t = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)))]
+    host_address: IpAddr,
+
+    #[arg(short, long, env, default_value_t = 8080)]
+    port: u16,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Connect to database
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
-    let db =
-        Database::connect("postgres://million_search:password1234@database/million_search").await?;
+    let args = Args::parse();
+
+    // Connect to database
+    let db = Database::connect(args.database_url).await?;
 
     Migrator::up(&db, None).await?;
 
     // Connect to meilisearch
-
-    let search_client = Client::new("http://meilisearch:7700", Option::<String>::None);
+    let search_client = Client::new(args.meilisearch_url, Option::<String>::None)?;
 
     search_client
         .index("websites")
@@ -65,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Make grpc endpoint
 
-    let addr = "0.0.0.0:8080".parse()?;
+    let addr = SocketAddr::new(args.host_address, args.port);
 
     let search_servise = SearchServise {
         db: db.clone(),

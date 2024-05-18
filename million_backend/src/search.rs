@@ -1,7 +1,7 @@
 use chrono::Utc;
 use entity::{search_history, websites};
 use futures::future::join_all;
-use meilisearch_sdk::{Client, SearchResults};
+use meilisearch_sdk::{client::Client, search::SearchResults};
 use migration::OnConflict;
 use proto::{
     search::{

@@ -13,6 +13,9 @@ services:
       - database
       - meilisearch
       - meilisync
+    environment:
+      - DATABASE_URL=postgres://million_search:password1234@database/million_search
+      - MEILISEARCH_URL=http://meilisearch:7700
   frontend:
     build:
       context: .

@@ -261,7 +261,6 @@ fn render_image_result(result: &SearchImageResult, page: u32, i: u32) -> anyhow:
     })
 }
 
-//TODO - Get this info from previus url
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ViewData {
     page: u32,
@@ -354,7 +353,7 @@ pub async fn image_view(
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
             html! {
-                div id="image-view" class="flex flex-col border-l border-neutral-200 dark:border-zinc-700 transition-all flex-1 overflow-y-scroll p-4" {
+                div id="image-view" class="flex flex-col border-l border-neutral-200 dark:border-zinc-700 transition-all flex-1 overflow-y-scroll overflow-x-hidden p-4" {
                     div class="flex flex-row items-center pb-8" {
                         div class="flex flex-1 flex-row items-center" {
                             img class="self-center w-4 h-4 rounded-full mr-2 bg-white" src=(img.source.as_ref().unwrap().icon_url.as_deref().unwrap_or("/public/gloabe.svg")) alt=(img.alt_text.as_deref().unwrap_or_default()) {}

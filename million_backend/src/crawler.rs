@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::{Duration, NaiveDateTime, Utc};
 use entity::sea_orm_active_enums::Status as JobStatus;
 use entity::{crawler_queue, websites};
-use meilisearch_sdk::Client;
+use meilisearch_sdk::client::Client;
 use proto::{
     crawler::{
         return_job_request::{self},

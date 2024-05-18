@@ -28,7 +28,7 @@ lazy_static! {
 #[derive(Parser, Clone)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value_t = String::from("http://localhost:8080"))]
+    #[arg(short, long, env, default_value_t = String::from("http://localhost:8080"))]
     endpoint: String,
 }
 

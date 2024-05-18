@@ -11,13 +11,15 @@ proto = { path = "../proto" }
 anyhow = { version = "1.0.82", features = ["backtrace"] }
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = ["full"] }
-dotenvy = "0.15.7"
 entity = { path = "entity" }
 migration = { path = "migration" }
 chrono = "0.4.38"
 url = "2.5.0"
-meilisearch-sdk = "0.25.0"
+meilisearch-sdk = "0.26.1"
 serde = { version = "1.0.200", features = ["derive"] }
 futures = "0.3.30"
 serde_json = "1.0.116"
 sea-query = "0.30.7"
+clap = { version = "4.5.4", features = ["env", "derive"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
