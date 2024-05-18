@@ -10,13 +10,12 @@ axum = "0.7.5"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 maud = { version = "0.26.0", features = ["axum"] }
 tokio = { version = "1.37.0", features = ["full"] }
-tonic = "0.11.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 proto = { path = "../proto" }
 anyhow = { version = "1.0.82", features = ["backtrace"] }
 serde = { version = "1.0.200", features = ["derive"] }
-tower-http = { version = "0.5.2", features = ["fs", "trace"] }
+tower-http = { version = "0.5.2", features = ["compression-full", "fs"] }
 tower-livereload = "0.9.2"
 serde_url_params = "0.2.1"
 serde_json = "1.0.116"

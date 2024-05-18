@@ -5,7 +5,7 @@ use clap::Parser;
 use crawler::CrawlerServise;
 use meilisearch_sdk::client::Client;
 use migration::{Migrator, MigratorTrait};
-use proto::tonic::transport::Server;
+use proto::tonic::{codec::CompressionEncoding, transport::Server};
 use sea_orm::Database;
 use search::SearchServise;
 use tracing_subscriber::EnvFilter;
@@ -104,13 +104,21 @@ async fn main() -> anyhow::Result<()> {
     println!("Starting");
 
     Server::builder()
-        .add_service(proto::search::search_server::SearchServer::new(
-            search_servise,
-        ))
-        .add_service(proto::crawler::crawler_server::CrawlerServer::new(
-            crawler_servise,
-        ))
-        .add_service(proto::admin::admin_server::AdminServer::new(admin_servise))
+        .add_service(
+            proto::search::search_server::SearchServer::new(search_servise)
+                .send_compressed(CompressionEncoding::Zstd)
+                .accept_compressed(CompressionEncoding::Zstd),
+        )
+        .add_service(
+            proto::crawler::crawler_server::CrawlerServer::new(crawler_servise)
+                .send_compressed(CompressionEncoding::Zstd)
+                .accept_compressed(CompressionEncoding::Zstd),
+        )
+        .add_service(
+            proto::admin::admin_server::AdminServer::new(admin_servise)
+                .send_compressed(CompressionEncoding::Zstd)
+                .accept_compressed(CompressionEncoding::Zstd),
+        )
         .serve(addr)
         .await?;
 

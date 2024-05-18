@@ -1,5 +1,8 @@
 use clap::{Parser, Subcommand};
-use proto::admin::{AddUrlToQueueRequest, GetAllUrlsInQueueRequest};
+use proto::{
+    admin::{AddUrlToQueueRequest, GetAllUrlsInQueueRequest},
+    tonic::codec::CompressionEncoding,
+};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -27,7 +30,9 @@ async fn main() {
 
     let mut backend = proto::admin::admin_client::AdminClient::connect(backend_url)
         .await
-        .unwrap();
+        .unwrap()
+        .send_compressed(CompressionEncoding::Zstd)
+        .accept_compressed(CompressionEncoding::Zstd);
 
     match cli.command {
         Commands::AddUrl { url } => {

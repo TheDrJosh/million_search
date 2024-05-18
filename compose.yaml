@@ -28,6 +28,8 @@ services:
           path: ./million_client
     depends_on:
       - backend
+    environment:
+      - ENDPOINT=http://backend:8080
           
   database:
     build:

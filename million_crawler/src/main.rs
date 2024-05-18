@@ -7,10 +7,10 @@ use lazy_static::lazy_static;
 use proto::{
     crawler::{
         crawler_client::CrawlerClient,
-        return_job_request::{self},
+        return_job_request,
         GetJobRequest, GetJobResponse, ReturnJobRequest,
     },
-    tonic::{transport::Channel, Code, Status},
+    tonic::{codec::CompressionEncoding, transport::Channel, Code, Status},
 };
 use serde::Deserialize;
 use tokio::task::spawn_blocking;
@@ -62,7 +62,10 @@ async fn run_many(args: Args, parallel_tasks: usize) -> anyhow::Result<()> {
 }
 
 async fn run(args: Args) -> anyhow::Result<()> {
-    let mut client = CrawlerClient::connect(args.endpoint).await?;
+    let mut client = CrawlerClient::connect(args.endpoint)
+        .await?
+        .send_compressed(CompressionEncoding::Zstd)
+        .accept_compressed(CompressionEncoding::Zstd);
 
     loop {
         let job = get_job(&mut client).await?;

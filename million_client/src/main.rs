@@ -1,5 +1,5 @@
 use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
 };
 
@@ -12,11 +12,16 @@ use axum::{
 use clap::Parser;
 use home::home_search_page;
 use maud::Markup;
-use proto::search::search_client::SearchClient;
+use proto::{
+    search::search_client::SearchClient,
+    tonic::{
+        codec::CompressionEncoding,
+        transport::{Channel, Uri},
+    },
+};
 use search::{image_view, search_page, search_page_results};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
-use tonic::transport::Channel;
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 use utils::search_suggestions;
@@ -27,11 +32,11 @@ mod utils;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, env, default_value_t = String::from("http://backend:8080"))]
-    endpoint: String,
+    #[arg(short, long, env)]
+    endpoint: Uri,
 
-    #[arg(short, long, env, default_value_t = String::from("0.0.0.0"))]
-    host_address: String,
+    #[arg(short, long, env, default_value_t = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)))]
+    host_address: IpAddr,
 
     #[arg(short, long, env, default_value_t = 3000)]
     port: u16,
@@ -49,9 +54,11 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-
     //TODO - Backoff retry
-    let client = SearchClient::connect(args.endpoint).await?;
+    let client = SearchClient::connect(args.endpoint)
+        .await?
+        .accept_compressed(CompressionEncoding::Zstd)
+        .send_compressed(CompressionEncoding::Zstd);
 
     let state = Arc::new(AppState {
         client: Mutex::new(client),
@@ -71,6 +78,10 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state);
 
     // let app = app.layer(LiveReloadLayer::new().reload_interval(Duration::from_millis(200)));
+
+    let compressionn_layer = tower_http::compression::CompressionLayer::new();
+
+    let app = app.layer(compressionn_layer);
 
     let listener = tokio::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
         Ipv4Addr::new(0, 0, 0, 0),
