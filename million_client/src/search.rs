@@ -39,7 +39,7 @@ pub async fn search_page(
         div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
     };
 
-    let surrounding_formating = match search_type {
+    let surrounding_formating = match &search_type {
         SearchType::Html => {
             html! {
                 div class="flex flex-col h-full overflow-y-scroll" {
@@ -61,16 +61,16 @@ pub async fn search_page(
         div class="h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {//min-h-lvh
             header class="flex flex-col pt-6 pb-2 border-b-2 border-neutral-200 dark:border-zinc-700 w-full items-center " {
                 div class="flex flex-row w-full items-center" {
-                    @match search_type {
+                    @match &search_type {
                         SearchType::Html => {
-                            a href="/" class="flex flex-col items-center" {
+                            a href="/" class="flex flex-col items-center"  {
                                 h1 class="font-bold tracking-tight text-3xl ml-6 mr-12 text-center" {
                                     "Million Search"
                                 }
                             }
                         }
                         SearchType::Image => {
-                            a href="/image" class="flex flex-col items-center" {
+                            a href="/image" class="flex flex-col items-center"  {
                                 h1 class="font-bold tracking-tight text-3xl ml-6 mr-12 text-center" {
                                     "Million Search"
                                 }
@@ -79,19 +79,26 @@ pub async fn search_page(
                                 }
                             }
                         }
-
                     }
 
                     form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
-                        (search_bar(&query.query, search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+                        (search_bar(&query.query, &search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
                     }
                 }
                 div class="flex flex-row gap-4 self-start pl-4 pt-2" {
-                    a href=("/search?".to_owned() + &url_params) {
-                        "Web"
-                    }
-                    a href=("/image/search?".to_owned() + &url_params) {
-                        "Images"
+
+
+                    @match &search_type {
+                        SearchType::Html => {
+                            a href=("/image/search?".to_owned() + &url_params)  {
+                                "Images"
+                            }
+                        }
+                        SearchType::Image => {
+                            a href=("/search?".to_owned() + &url_params)  {
+                                "Web"
+                            }
+                        }
                     }
                 }
             }

@@ -22,14 +22,14 @@ pub fn basic_page(body: Markup) -> Markup {
                 script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous" defer {}
                 script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/json-enc.js" defer {}
             }
-            body class="dark:bg-zinc-800 dark:text-zinc-50" {
+            body class="dark:bg-zinc-800 dark:text-zinc-50" hx-boost="true" {
                 (body)
             }
         }
     }
 }
 
-pub fn search_bar(query: &str, search_type: SearchType) -> anyhow::Result<Markup> {
+pub fn search_bar(query: &str, search_type: &SearchType) -> anyhow::Result<Markup> {
     let vals = serde_json::to_string(&serde_json::json!({
         "search_type": search_type
     }))?;
@@ -90,7 +90,7 @@ pub async fn search_suggestions(
             })
             .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
-            a href=(search_url.to_owned() + "?" + &search_params) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600" {
+            a href=(search_url.to_owned() + "?" + &search_params) class="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-zinc-600"  {
                 (possibility)
             }
         }

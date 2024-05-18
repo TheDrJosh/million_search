@@ -21,11 +21,11 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
         div class="h-lvh flex flex-col items-center justify-center dark:bg-zinc-800 dark:text-zinc-50" {
             div class="ml-2 flex flex-row gap-4 self-start" {
                 @if search_type != SearchType::Html {
-                    a href="/" {
+                    a href="/"  {
                         "Web"
                     }
                 } @else {
-                    a href="/image" {
+                    a href="/image"  {
                         "Images"
                     }
                 }
@@ -43,7 +43,7 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
                     }
                 }
                 form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
-                    (search_bar("", search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+                    (search_bar("", &search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
                 }
             }
 

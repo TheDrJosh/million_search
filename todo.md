@@ -18,3 +18,4 @@
 - [ ] selection indecator for the image sidebar
 - [ ] dont allow blank search
 - [ ] use hx-boost
+- [ ] reduce clones
