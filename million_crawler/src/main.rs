@@ -6,8 +6,9 @@ use futures::future::join_all;
 use lazy_static::lazy_static;
 use proto::{
     crawler::{
-        crawler_client::CrawlerClient, return_job_request, GetJobRequest, GetJobResponse,
-        ReturnJobRequest,
+        crawler_client::CrawlerClient,
+        return_job_request::{self},
+        GetJobRequest, GetJobResponse, ReturnJobRequest,
     },
     tonic::{codec::CompressionEncoding, transport::Channel, Code, Status},
 };
@@ -154,23 +155,39 @@ async fn do_job(job: &GetJobResponse) -> anyhow::Result<return_job_request::Ok> 
             |(image_url, image_alt_text)| async move {
                 let img_res = reqwest::get(image_url.clone()).await?;
                 let img_bytes = img_res.bytes().await?;
+                // let svg_text = String::from_utf8(img_bytes.to_vec()).ok();
 
-                let size = spawn_blocking(move || {
-                    image::io::Reader::new(Cursor::new(img_bytes))
+                let img = spawn_blocking(move || {
+                    image::io::Reader::new(Cursor::new(&img_bytes))
                         .with_guessed_format()
                         .ok()
                         .and_then(|img| img.decode().ok())
-                        .map(|img| return_job_request::ok::body::image::Size {
-                            width: img.width() as i32,
-                            height: img.height() as i32,
-                        })
                 })
                 .await?;
+
+                let size = img
+                    .as_ref()
+                    .map(|img| return_job_request::ok::body::image::Size {
+                        width: img.width() as i32,
+                        height: img.height() as i32,
+                    });
+
+                // let luminance_range = spawn_blocking(move || {
+                //     img.as_ref()
+                //         .and_then(get_luminance_range_image)
+                //         .or_else(|| {
+                //             svg_text
+                //                 .as_deref()
+                //                 .and_then(get_luminance_range_svg)
+                //         })
+                // })
+                // .await?;
 
                 anyhow::Result::Ok(return_job_request::ok::body::Image {
                     image_url: image_url.to_string(),
                     size,
                     alt_text: image_alt_text,
+                    // luminance_range,
                 })
             },
         ))
@@ -238,3 +255,74 @@ struct Manifest {
     description: Option<String>,
     categories: Option<Vec<String>>,
 }
+
+// fn get_luminance_range_image(img: &DynamicImage) -> Option<LuminanceRange> {
+//     let mut min_luminance = f32::INFINITY;
+//     let mut max_luminance = -f32::INFINITY;
+//     let mut contact = false;
+
+//     for j in 0..img.height() {
+//         for i in 0..img.width() {
+//             let p = img.get_pixel(i, j);
+
+//             if p[3] > 127 {
+//                 contact = true;
+//                 let luminance = get_luminance(
+//                     p[0] as f32 / 255f32,
+//                     p[1] as f32 / 255f32,
+//                     p[2] as f32 / 255f32,
+//                 );
+//                 min_luminance = f32::min(min_luminance, luminance);
+//                 max_luminance = f32::max(max_luminance, luminance);
+//             }
+//         }
+//     }
+
+//     if contact {
+//         Some(LuminanceRange {
+//             min: min_luminance,
+//             max: max_luminance,
+//         })
+//     } else {
+//         None
+//     }
+// }
+
+// fn get_luminance_range_svg(img: &str) -> Option<LuminanceRange> {
+//     let parsed_svg = resvg::usvg::Tree::from_str(
+//         img,
+//         &resvg::usvg::Options::default(),
+//         &resvg::usvg::fontdb::Database::default(),
+//     )
+//     .ok()?;
+
+//     let mut pix_map = resvg::tiny_skia::Pixmap::new(1024, 1024).unwrap();
+
+//     resvg::render(
+//         &parsed_svg,
+//         resvg::usvg::Transform::default(),
+//         &mut pix_map.as_mut(),
+//     );
+
+//     let img = image::RgbaImage::from_vec(1024, 1024, pix_map.data().to_vec()).unwrap();
+
+//     img.save("test.png").unwrap();
+
+//     get_luminance_range_image(&img.into())
+// }
+
+// fn get_luminance(r: f32, g: f32, b: f32) -> f32 {
+//     let r = srgb_to_linear(r);
+//     let g = srgb_to_linear(g);
+//     let b = srgb_to_linear(b);
+
+//     0.2126 * r + 0.7152 * g + 0.0722 * b
+// }
+
+// fn srgb_to_linear(c: f32) -> f32 {
+//     if c <= 0.04045 {
+//         c / 12.92
+//     } else {
+//         f32::powf((c + 0.055) / 1.055, 2.4)
+//     }
+// }

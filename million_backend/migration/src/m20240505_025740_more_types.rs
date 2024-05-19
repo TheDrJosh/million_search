@@ -60,10 +60,13 @@ impl MigrationTrait for Migration {
 enum Image {
     Table,
     Id,
+
     Url,
     Width,
     Height,
     AltText,
+
     Source,
+
     CreatedAt,
 }

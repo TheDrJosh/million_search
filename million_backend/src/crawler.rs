@@ -203,17 +203,25 @@ impl proto::crawler::crawler_server::Crawler for CrawlerServise {
             for img in html_body.images {
                 //TODO - Remove duplicates
                 //TODO - Don't add images without text
-                let (width, height) = if let Some(size) = img.size {
-                    (Some(size.width), Some(size.height))
-                } else {
-                    (None, None)
-                };
+
+                let (width, height) = img
+                    .size
+                    .map(|size| (Some(size.width), Some(size.height)))
+                    .unwrap_or_default();
+
+                // let (min_luminance, max_luminance) = img
+                //     .luminance_range
+                //     .map(|range| (Some(range.min), Some(range.max)))
+                //     .unwrap_or_default();
+
                 let image = entity::image::ActiveModel {
                     url: ActiveValue::Set(img.image_url),
                     width: ActiveValue::Set(width),
                     height: ActiveValue::Set(height),
                     alt_text: ActiveValue::Set(img.alt_text),
                     source: ActiveValue::Set(website.id),
+                    // min_luminance: ActiveValue::Set(min_luminance),
+                    // max_luminance: ActiveValue::Set(max_luminance),
                     ..Default::default()
                 };
                 image

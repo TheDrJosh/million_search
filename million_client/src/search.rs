@@ -250,7 +250,7 @@ fn render_image_result(result: &SearchImageResult, page: u32, i: u32) -> anyhow:
 
     Ok(html! {
         div class="flex flex-col m-4 w-fit max-w-48" {
-            img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md" alt=(result.alt_text())
+            img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md bg-white" alt=(result.alt_text())
                 hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) hx-ext="json-enc" {}
 
             a href=(result.source.as_ref().unwrap().url) class="min-w-0 flex flex-col" {
@@ -375,7 +375,7 @@ pub async fn image_view(
                         }
                     }
 
-                    img class="self-center m-2 w-full rounded" src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
+                    img class="self-center m-2 w-full rounded bg-white" src=(img.url) alt=(img.alt_text.as_deref().unwrap_or_default()) {}
 
                     div class="flex flex-row pt-4 items-center" {
                         span class="flex-1" {
