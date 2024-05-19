@@ -43,7 +43,7 @@ pub async fn home_search_page(search_type: SearchType) -> Result<Markup, StatusC
                     }
                 }
                 form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
-                    (search_bar("", &search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+                    (search_bar(""))
                 }
             }
 

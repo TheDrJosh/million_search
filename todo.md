@@ -14,7 +14,6 @@
 - [ ] logging
 - [ ] auth for crawler and admin
 - [ ] no js mode
-- [ ] ???? have high contrast background <https://stackoverflow.com/questions/3942878/how-to-decide-font-color-in-white-or-black-depending-on-background-color> <https://www.w3.org/TR/WCAG20/>
 - [ ] selection indecator for the image sidebar
 - [ ] dont allow blank search
 - [x] use hx-boost
@@ -22,3 +21,5 @@
 - [ ] size range filter
 - [ ] make alt text non optional
 - [ ] add cache layer
+- [ ] relevent text dislay for web results
+- [ ] split backend into 3 microservies

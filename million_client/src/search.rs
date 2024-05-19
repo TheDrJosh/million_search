@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     extract::State,
     http::{HeaderMap, HeaderName, StatusCode, Uri},
-    Json,
+    Form,
 };
 use maud::{html, Markup};
 
@@ -31,31 +31,9 @@ pub async fn search_page(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.query.clone(),
         page: None,
-        size_range: query.size_range,
+        image_params: query.image_params,
     })
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let grab_list = html! {
-        div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
-    };
-
-    let surrounding_formating = match &search_type {
-        SearchType::Html => {
-            html! {
-                div class="flex flex-col h-full overflow-y-scroll" {
-                    (grab_list)
-                }
-            }
-        }
-        SearchType::Image => html! {
-            div class="flex flex-row h-full overflow-hidden" {
-                div class="flex flex-row flex-wrap flex-[2] overflow-y-scroll" {
-                    (grab_list)
-                }
-                div id="image-view" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {}
-            }
-        },
-    };
 
     Ok(basic_page(html! {
         div class="h-lvh flex flex-col items-start dark:bg-zinc-800 dark:text-zinc-50 overflow-hidden" {//min-h-lvh
@@ -82,7 +60,7 @@ pub async fn search_page(
                     }
 
                     form action=(search_url) autocomplete="off" class="flex flex-row items-center" {
-                        (search_bar(&query.query, &search_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+                        (search_bar(&query.query))
                     }
                 }
                 div class="flex flex-row gap-4 self-start pl-4 pt-2" {
@@ -104,7 +82,21 @@ pub async fn search_page(
             }
 
             div class="flex-1 px-6 pt-4 w-full overflow-hidden" {//overflow-y-scroll
-                (surrounding_formating)
+                @match &search_type {
+                    SearchType::Html => {
+                        div class="flex flex-col h-full overflow-y-scroll" {
+                            div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
+                        }
+                    }
+                    SearchType::Image => {
+                        div class="flex flex-row h-full overflow-hidden" {
+                            div class="flex flex-row flex-wrap flex-[2] overflow-y-scroll" {
+                                div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
+                            }
+                            div id="image-view" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {}
+                        }
+                    },
+                }
             }
 
 
@@ -154,7 +146,7 @@ async fn search_page_results_html(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
         page: Some(page + 1),
-        size_range: None,
+        image_params: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
@@ -228,7 +220,7 @@ async fn search_page_results_image(
     let search_params = serde_json::to_string(&SearchQuery {
         query: query.clone(),
         page: Some(page + 1),
-        size_range: None,
+        image_params: None,
     })
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
@@ -251,7 +243,7 @@ fn render_image_result(result: &SearchImageResult, page: u32, i: u32) -> anyhow:
     Ok(html! {
         div class="flex flex-col m-4 w-fit max-w-48" {
             img src=(result.url) class="min-h-12 max-h-36 object-contain rounded-md bg-white" alt=(result.alt_text())
-                hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) hx-ext="json-enc" {}
+                hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(view_data) {}
 
             a href=(result.source.as_ref().unwrap().url) class="min-w-0 flex flex-col" {
                 div class="flex flex-row items-center min-w-0" {
@@ -277,7 +269,7 @@ pub struct ViewData {
 pub async fn image_view(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    view_state: Option<Json<ViewData>>,
+    view_state: Option<Form<ViewData>>,
 ) -> Result<Markup, (StatusCode, String)> {
     let current_url = headers
         .get(HeaderName::from_static("hx-current-url"))
@@ -299,7 +291,7 @@ pub async fn image_view(
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     Ok(match view_state {
-        Some(Json(view_data)) => {
+        Some(Form(view_data)) => {
             let img_list = state
                 .client
                 .lock()
@@ -309,15 +301,17 @@ pub async fn image_view(
                         query: search_query.query.clone(),
                         page: view_data.page,
                     }),
-                    size: search_query
-                        .size_range
-                        .as_ref()
-                        .map(|range| proto::search::SizeRange {
-                            min_width: range.min_width,
-                            min_height: range.min_height,
-                            max_width: range.max_width,
-                            max_height: range.max_height,
-                        }),
+                    size: search_query.image_params.as_ref().and_then(|params| {
+                        params
+                            .size_range
+                            .as_ref()
+                            .map(|range| proto::search::SizeRange {
+                                min_width: range.min_width,
+                                min_height: range.min_height,
+                                max_width: range.max_width,
+                                max_height: range.max_height,
+                            })
+                    }),
                 })
                 .await
                 .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
@@ -369,8 +363,8 @@ pub async fn image_view(
                             }
                         }
                         div class="flex flex-row pl-8 items-center font-semibold" {
-                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) hx-ext="json-enc" {"<"}
-                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) hx-ext="json-enc" {">"}
+                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(prev_view) {"<"}
+                            button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" hx-vals=(next_view) {">"}
                             button class="px-4" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {"X"}
                         }
                     }

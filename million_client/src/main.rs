@@ -1,5 +1,5 @@
 use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
 
@@ -19,7 +19,7 @@ use proto::{
         transport::{Channel, Uri},
     },
 };
-use search::{image_view, search_page, search_page_results};
+use search::{image_view, search_page, search_page_results, ViewData};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tower_http::services::ServeDir;
@@ -54,7 +54,6 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    //TODO - Backoff retry
     let client = SearchClient::connect(args.endpoint)
         .await?
         .accept_compressed(CompressionEncoding::Zstd)
@@ -75,19 +74,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/image/search/view", post(image_view))
         .route("/search-suggestions", post(search_suggestions))
         .nest_service("/public", ServeDir::new("public"))
-        .with_state(state);
+        .with_state(state)
+        .layer(tower_http::compression::CompressionLayer::new());
 
-    // let app = app.layer(LiveReloadLayer::new().reload_interval(Duration::from_millis(200)));
-
-    let compressionn_layer = tower_http::compression::CompressionLayer::new();
-
-    let app = app.layer(compressionn_layer);
-
-    let listener = tokio::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
-        Ipv4Addr::new(0, 0, 0, 0),
-        args.port,
-    )))
-    .await?;
+    let listener =
+        tokio::net::TcpListener::bind(SocketAddr::new(args.host_address, args.port)).await?;
 
     axum::serve(listener, app).await?;
 
@@ -112,11 +103,19 @@ struct SearchQuery {
     query: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     page: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    size_range: Option<SizeRange>,
+    #[serde(skip_serializing_if = "Option::is_none", flatten)]
+    image_params: Option<ImageParams>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize)]
+struct ImageParams {
+    #[serde(skip_serializing_if = "Option::is_none", flatten)]
+    size_range: Option<SizeRange>,
+    #[serde(skip_serializing_if = "Option::is_none", flatten)]
+    selected: Option<ViewData>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SizeRange {
     pub min_width: u32,
     pub min_height: u32,
@@ -141,7 +140,7 @@ async fn search_html_results(
     State(state): State<Arc<AppState>>,
     Form(query): Form<SearchQuery>,
 ) -> Result<Markup, (StatusCode, String)> {
-    if query.size_range.is_some() {
+    if query.image_params.is_some() {
         return Err((
             StatusCode::BAD_REQUEST,
             String::from("incorrect query params for search type"),
