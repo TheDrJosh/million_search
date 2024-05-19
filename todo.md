@@ -21,3 +21,4 @@
 - [ ] add tls to client
 - [ ] size range filter
 - [ ] make alt text non optional
+- [ ] add cache layer
