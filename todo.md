@@ -13,7 +13,7 @@
 - [ ] use robot.txt
 - [ ] logging
 - [ ] auth for crawler and admin
-- [ ] no js mode
+- [ ] no js mode / make htmx optional
 - [ ] selection indecator for the image sidebar
 - [ ] dont allow blank search
 - [x] use hx-boost

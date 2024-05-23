@@ -86,6 +86,7 @@ pub async fn search_page(
                     SearchType::Html => {
                         div class="flex flex-col h-full overflow-y-scroll" {
                             div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
+
                         }
                     }
                     SearchType::Image => {
@@ -93,7 +94,7 @@ pub async fn search_page(
                             div class="flex flex-row flex-wrap flex-[2] overflow-y-scroll" {
                                 div hx-post=(search_url) hx-trigger="intersect once" hx-swap="outerHTML" hx-vals=(search_params) {}
                             }
-                            div id="image-view" hx-post="/image/search/view" hx-target="#image-view" hx-swap="outerHTML" {}
+                            div id="image-view" {}
                         }
                     },
                 }
